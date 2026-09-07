@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Noto+Sans+Gurmukhi:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-gold: #dd9933;
+  --primary-gold-dark: #b87b20;
+  --bg-creme: #fdfbf7;
+}
+
+body {
+  background-color: var(--bg-creme);
+  color: #1e293b;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+.font-gurmukhi {
+  font-family: 'Noto Sans Gurmukhi', -apple-system, sans-serif;
+}
+
+.font-serif-heading {
+  font-family: 'Cinzel', Georgia, serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1ede4;
+}
+::-webkit-scrollbar-thumb {
+  background: #dd9933;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b87b20;
+}
+
+/* Golden gradient backgrounds & borders */
+.gold-gradient-bg {
+  background: linear-gradient(135deg, #dd9933 0%, #f4bc59 50%, #c57f20 100%);
+}
+
+.gold-border {
+  border-color: #dd9933;
+}
+
+.gold-shadow {
+  box-shadow: 0 4px 20px -2px rgba(221, 153, 51, 0.25);
+}
+
+/* Sacred Gurmukhi text styling */
+.gurbani-text {
+  font-family: 'Noto Sans Gurmukhi', sans-serif;
+  line-height: 2.1;
+  letter-spacing: 0.02em;
+}
+
+/* Print view optimization */
+@media print {
+  header, footer, .slider-section, .sidebar-section, .no-print {
+    display: none !important;
+  }
+  .hukamnama-print-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+}
