@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -10,6 +10,14 @@ import {
 } from 'lucide-react';
 
 export default function PagesManagementPage() {
+  return (
+    <Suspense fallback={<AdminLayout><div className="p-8 text-center text-gray-500">Loading pages...</div></AdminLayout>}>
+      <PagesManagementContent />
+    </Suspense>
+  );
+}
+
+function PagesManagementContent() {
   const searchParams = useSearchParams();
   const initialType = searchParams.get('type') || 'all';
 
