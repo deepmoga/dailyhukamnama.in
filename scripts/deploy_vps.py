@@ -14,7 +14,7 @@ commands = [
     "cd /home/demo.dailyhukamnama.in/app && npm run build",
     "pm2 restart demo.dailyhukamnama.in",
     "python3 -c \"import uharfbuzz, freetype, PIL; print('Python libraries ready!')\"",
-    "cd /home/demo.dailyhukamnama.in/app && node -e \"const { forceRegeneratePoster } = require('./lib/hukamnama-service'); forceRegeneratePoster().then(r => console.log('Regenerated:', r)).catch(e => console.error(e));\""
+    "cd /home/demo.dailyhukamnama.in/app && node --env-file=.env.local -e \"import('./lib/hukamnama-service.js').then(m => m.forceRegeneratePoster()).then(r => console.log('Regenerated:', r)).catch(e => console.error(e));\""
 ]
 
 for cmd in commands:
