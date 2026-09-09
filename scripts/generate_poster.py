@@ -72,13 +72,16 @@ def resolve_font_path(family, bold=False):
 
 
 class ShapedFont:
-    def __init__(self, font_path, size, bold=False):
+    def __init__(self, font_path, size, bold=False, fallback_path=None):
         self.font_path = font_path
+        self.fallback_path = fallback_path
         self.size = size
         self.bold = bold
         self.pil_font = None
         self.ft_face = None
         self.hb_font = None
+        self.fallback_ft_face = None
+        self.fallback_hb_font = None
 
         if HAS_HARFBUZZ and font_path and os.path.exists(font_path):
             try:
@@ -92,6 +95,19 @@ class ShapedFont:
             except Exception as e:
                 self.ft_face = None
                 self.hb_font = None
+
+        if HAS_HARFBUZZ and fallback_path and os.path.exists(fallback_path):
+            try:
+                self.fallback_ft_face = freetype.Face(fallback_path)
+                self.fallback_ft_face.set_char_size(int(round(size * 64)))
+                with open(fallback_path, "rb") as f:
+                    f_blob = hb.Blob(f.read())
+                f_hb_face = hb.Face(f_blob)
+                self.fallback_hb_font = hb.Font(f_hb_face)
+                self.fallback_hb_font.scale = (int(round(size * 64)), int(round(size * 64)))
+            except Exception:
+                self.fallback_ft_face = None
+                self.fallback_hb_font = None
 
         if font_path and os.path.exists(font_path):
             try:
@@ -107,15 +123,40 @@ class ShapedFont:
         else:
             self.pil_font = ImageFont.load_default()
 
+    def split_runs(self, text):
+        if not self.fallback_hb_font or not text:
+            return [(text, True)]
+        runs = []
+        curr = []
+        is_gur = None
+        for ch in text:
+            g = (0x0A00 <= ord(ch) <= 0x0A7F) or ch in '।॥ '
+            if is_gur is None:
+                is_gur = g
+                curr.append(ch)
+            elif is_gur == g:
+                curr.append(ch)
+            else:
+                runs.append((''.join(curr), is_gur))
+                curr = [ch]
+                is_gur = g
+        if curr:
+            runs.append((''.join(curr), is_gur))
+        return runs
+
     def get_width(self, text):
         if not text:
             return 0.0
         if self.hb_font:
-            buf = hb.Buffer()
-            buf.add_str(text)
-            buf.guess_segment_properties()
-            hb.shape(self.hb_font, buf)
-            return sum(pos.x_advance for pos in buf.glyph_positions) / 64.0
+            total_w = 0.0
+            for chunk, is_gur in self.split_runs(text):
+                f = self.hb_font if is_gur else (self.fallback_hb_font or self.hb_font)
+                buf = hb.Buffer()
+                buf.add_str(chunk)
+                buf.guess_segment_properties()
+                hb.shape(f, buf)
+                total_w += sum(pos.x_advance for pos in buf.glyph_positions) / 64.0
+            return total_w
         else:
             if PIL_HAS_RAQM and self.pil_font:
                 try:
@@ -158,30 +199,34 @@ class ShapedFont:
                 rgb = fill[:3]
             fill_rgba = (rgb[0], rgb[1], rgb[2], 255)
 
-            buf = hb.Buffer()
-            buf.add_str(text)
-            buf.guess_segment_properties()
-            hb.shape(self.hb_font, buf)
-
-            ascender = self.ft_face.size.ascender / 64.0
             curr_x = float(x)
-            curr_y = float(y + ascender)
+            for chunk, is_gur in self.split_runs(text):
+                face = self.ft_face if is_gur else (self.fallback_ft_face or self.ft_face)
+                f = self.hb_font if is_gur else (self.fallback_hb_font or self.hb_font)
 
-            for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
-                gid = info.codepoint
-                self.ft_face.load_glyph(gid, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_TARGET_NORMAL)
-                glyph = self.ft_face.glyph
-                bmp = glyph.bitmap
-                bx = int(round(curr_x + pos.x_offset / 64.0 + glyph.bitmap_left))
-                by = int(round(curr_y - pos.y_offset / 64.0 - glyph.bitmap_top))
+                buf = hb.Buffer()
+                buf.add_str(chunk)
+                buf.guess_segment_properties()
+                hb.shape(f, buf)
 
-                if bmp.width > 0 and bmp.rows > 0:
-                    mask = Image.frombytes('L', (bmp.width, bmp.rows), bytes(bmp.buffer))
-                    colored = Image.new('RGBA', (bmp.width, bmp.rows), fill_rgba)
-                    img.paste(colored, (bx, by), mask)
+                ascender = face.size.ascender / 64.0
+                curr_y = float(y + ascender)
 
-                curr_x += pos.x_advance / 64.0
-                curr_y += pos.y_advance / 64.0
+                for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
+                    gid = info.codepoint
+                    face.load_glyph(gid, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_TARGET_NORMAL)
+                    glyph = face.glyph
+                    bmp = glyph.bitmap
+                    bx = int(round(curr_x + pos.x_offset / 64.0 + glyph.bitmap_left))
+                    by = int(round(curr_y - pos.y_offset / 64.0 - glyph.bitmap_top))
+
+                    if bmp.width > 0 and bmp.rows > 0:
+                        mask = Image.frombytes('L', (bmp.width, bmp.rows), bytes(bmp.buffer))
+                        colored = Image.new('RGBA', (bmp.width, bmp.rows), fill_rgba)
+                        img.paste(colored, (bx, by), mask)
+
+                    curr_x += pos.x_advance / 64.0
+                    curr_y += pos.y_advance / 64.0
         else:
             draw = ImageDraw.Draw(img)
             kwargs = {}
@@ -240,7 +285,8 @@ class ShapedFont:
 
 def get_font(family, size, bold=False):
     p = resolve_font_path(family, bold=bold)
-    return ShapedFont(p, size, bold=bold)
+    fallback_p = resolve_font_path("serif", bold=bold) if family == "gurmukhi_serif" else None
+    return ShapedFont(p, size, bold=bold, fallback_path=fallback_p)
 
 
 def generate_posters(payload):
