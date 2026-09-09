@@ -1,9 +1,7 @@
 """
-generate_poster.py  –  Daily Hukamnama Poster Generator (2-Page Newspaper Template)
+generate_poster.py  –  Daily Hukamnama Poster Generator (2-Page Publication Template)
 Generates high-resolution social & archival posters on the user-provided bg.jpg template.
-Matches reference layout:
- - Page 1: Header (English title & date), Punjabi Raag, Gurbani Mukhwak, Gurmukhi Date & Ang, Punjabi Viakhya
- - Page 2: Punjabi Viakhya overflow, English Translation heading, English Raag, English Translation body, English Date & Page
+Uses HarfBuzz (via uharfbuzz & freetype-py, or PIL with Raqm) for 100% authentic Gurmukhi complex text shaping (properly placing sihari ਿ, subjoined consonants, etc.).
 """
 
 import os
@@ -11,11 +9,20 @@ import sys
 import json
 import base64
 import argparse
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageColor, features
 
 if sys.platform.startswith("win"):
     import io
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+
+try:
+    import uharfbuzz as hb
+    import freetype
+    HAS_HARFBUZZ = True
+except ImportError:
+    HAS_HARFBUZZ = False
+
+PIL_HAS_RAQM = features.check('raqm')
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FONTS_DIR = os.path.join(BASE_DIR, "public", "assets", "fonts")
@@ -32,99 +39,209 @@ def find_bg_image():
             return c
     return None
 
-def get_font(family, size, bold=False):
-    """
-    Font loader prioritized for self-contained bundled fonts in public/assets/fonts/
-    with fallbacks for Windows and Linux.
-    """
+def resolve_font_path(family, bold=False):
     if family == "gurmukhi_serif":
-        names = ["NotoSerifGurmukhi-Bold.ttf" if bold else "NotoSerifGurmukhi-Regular.ttf",
-                 "NotoSerifGurmukhi-Variable.ttf",
-                 "NotoSansGurmukhi-Bold.ttf" if bold else "NotoSansGurmukhi-Regular.ttf",
-                 "NotoSansGurmukhi.ttf"]
+        names = [
+            "NotoSerifGurmukhi-Bold.ttf" if bold else "NotoSerifGurmukhi-Regular.ttf",
+            "NotoSerifGurmukhi-Variable.ttf",
+            "NotoSansGurmukhi-Bold.ttf" if bold else "NotoSansGurmukhi-Regular.ttf",
+            "NotoSansGurmukhi.ttf"
+        ]
         for name in names:
             p = os.path.join(FONTS_DIR, name)
             if os.path.exists(p):
-                try:
-                    return ImageFont.truetype(p, int(round(size)))
-                except Exception:
-                    pass
+                return p
     elif family == "serif":
-        names = ["timesbd.ttf" if bold else "times.ttf",
-                 "georgiab.ttf" if bold else "georgia.ttf",
-                 "NotoSerif-Bold.ttf" if bold else "NotoSerif-Regular.ttf"]
+        names = [
+            "timesbd.ttf" if bold else "times.ttf",
+            "georgiab.ttf" if bold else "georgia.ttf",
+            "NotoSerif-Bold.ttf" if bold else "NotoSerif-Regular.ttf"
+        ]
         for name in names:
             p_local = os.path.join(FONTS_DIR, name)
             if os.path.exists(p_local):
-                try:
-                    return ImageFont.truetype(p_local, int(round(size)))
-                except Exception:
-                    pass
+                return p_local
             p_win = os.path.join(WIN_FONTS, name)
             if os.path.exists(p_win):
-                try:
-                    return ImageFont.truetype(p_win, int(round(size)))
-                except Exception:
-                    pass
+                return p_win
             for linux_dir in ["/usr/share/fonts/truetype/msttcorefonts", "/usr/share/fonts/truetype/liberation", "/usr/share/fonts"]:
                 p_linux = os.path.join(linux_dir, name)
                 if os.path.exists(p_linux):
-                    try:
-                        return ImageFont.truetype(p_linux, int(round(size)))
-                    except Exception:
-                        pass
-    try:
-        return ImageFont.load_default(size=int(round(size)))
-    except Exception:
-        return ImageFont.load_default()
+                    return p_linux
+    return None
 
-def wrap_words(draw, text, font, max_width):
-    if not text:
-        return []
-    cleaned = " ".join(text.split())
-    words = cleaned.split(" ")
-    lines = []
-    current_line = []
-    for word in words:
-        test_line = " ".join(current_line + [word])
-        bbox = draw.textbbox((0, 0), test_line, font=font)
-        if (bbox[2] - bbox[0]) <= max_width:
-            current_line.append(word)
+
+class ShapedFont:
+    def __init__(self, font_path, size, bold=False):
+        self.font_path = font_path
+        self.size = size
+        self.bold = bold
+        self.pil_font = None
+        self.ft_face = None
+        self.hb_font = None
+
+        if HAS_HARFBUZZ and font_path and os.path.exists(font_path):
+            try:
+                self.ft_face = freetype.Face(font_path)
+                self.ft_face.set_char_size(int(round(size * 64)))
+                with open(font_path, "rb") as f:
+                    blob = hb.Blob(f.read())
+                hb_face = hb.Face(blob)
+                self.hb_font = hb.Font(hb_face)
+                self.hb_font.scale = (int(round(size * 64)), int(round(size * 64)))
+            except Exception as e:
+                self.ft_face = None
+                self.hb_font = None
+
+        if font_path and os.path.exists(font_path):
+            try:
+                if PIL_HAS_RAQM:
+                    self.pil_font = ImageFont.truetype(font_path, int(round(size)), layout_engine=ImageFont.Layout.RAQM)
+                else:
+                    self.pil_font = ImageFont.truetype(font_path, int(round(size)))
+            except Exception:
+                try:
+                    self.pil_font = ImageFont.truetype(font_path, int(round(size)))
+                except Exception:
+                    self.pil_font = ImageFont.load_default()
         else:
-            if current_line:
-                lines.append(current_line)
-                current_line = [word]
+            self.pil_font = ImageFont.load_default()
+
+    def get_width(self, text):
+        if not text:
+            return 0.0
+        if self.hb_font:
+            buf = hb.Buffer()
+            buf.add_str(text)
+            buf.guess_segment_properties()
+            hb.shape(self.hb_font, buf)
+            return sum(pos.x_advance for pos in buf.glyph_positions) / 64.0
+        else:
+            if PIL_HAS_RAQM and self.pil_font:
+                try:
+                    bbox = self.pil_font.getbbox(text, direction="ltr")
+                    return float(bbox[2] - bbox[0])
+                except Exception:
+                    pass
+            bbox = self.pil_font.getbbox(text)
+            return float(bbox[2] - bbox[0])
+
+    def get_bbox(self, xy, text):
+        x, y = xy
+        if not text:
+            return (x, y, x, y)
+        if self.hb_font and self.ft_face:
+            ascender = self.ft_face.size.ascender / 64.0
+            descender = self.ft_face.size.descender / 64.0
+            w = self.get_width(text)
+            h = ascender - descender
+            return (x, y, x + w, y + h)
+        else:
+            if PIL_HAS_RAQM and self.pil_font:
+                try:
+                    b = self.pil_font.getbbox(text, direction="ltr")
+                    return (x + b[0], y + b[1], x + b[2], y + b[3])
+                except Exception:
+                    pass
+            b = self.pil_font.getbbox(text)
+            return (x + b[0], y + b[1], x + b[2], y + b[3])
+
+    def draw_text(self, img, xy, text, fill="#000000"):
+        if not text:
+            return
+        x, y = xy
+
+        if self.hb_font and self.ft_face:
+            if isinstance(fill, str):
+                rgb = ImageColor.getrgb(fill)
             else:
-                lines.append([word])
-                current_line = []
-    if current_line:
-        lines.append(current_line)
-    return lines
+                rgb = fill[:3]
+            fill_rgba = (rgb[0], rgb[1], rgb[2], 255)
 
-def draw_justified(draw, words, x, y, font, fill, target_w, is_last=False):
-    if not words:
-        return
-    if is_last or len(words) == 1:
-        draw.text((x, y), " ".join(words), fill=fill, font=font)
-        return
-    
-    word_widths = [draw.textbbox((0, 0), w, font=font)[2] - draw.textbbox((0, 0), w, font=font)[0] for w in words]
-    total_w = sum(word_widths)
-    space_needed = target_w - total_w
-    num_spaces = len(words) - 1
-    
-    space_bbox = draw.textbbox((0, 0), " ", font=font)
-    normal_space_w = max(space_bbox[2] - space_bbox[0], 1)
-    avg_space = space_needed / num_spaces if num_spaces > 0 else normal_space_w
-    
-    if avg_space > normal_space_w * 3.0:
-        draw.text((x, y), " ".join(words), fill=fill, font=font)
-        return
+            buf = hb.Buffer()
+            buf.add_str(text)
+            buf.guess_segment_properties()
+            hb.shape(self.hb_font, buf)
 
-    curr_x = x
-    for w, ww in zip(words, word_widths):
-        draw.text((curr_x, y), w, fill=fill, font=font)
-        curr_x += ww + avg_space
+            ascender = self.ft_face.size.ascender / 64.0
+            curr_x = float(x)
+            curr_y = float(y + ascender)
+
+            for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
+                gid = info.codepoint
+                self.ft_face.load_glyph(gid, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_TARGET_NORMAL)
+                glyph = self.ft_face.glyph
+                bmp = glyph.bitmap
+                bx = int(round(curr_x + pos.x_offset / 64.0 + glyph.bitmap_left))
+                by = int(round(curr_y - pos.y_offset / 64.0 - glyph.bitmap_top))
+
+                if bmp.width > 0 and bmp.rows > 0:
+                    mask = Image.frombytes('L', (bmp.width, bmp.rows), bytes(bmp.buffer))
+                    colored = Image.new('RGBA', (bmp.width, bmp.rows), fill_rgba)
+                    img.paste(colored, (bx, by), mask)
+
+                curr_x += pos.x_advance / 64.0
+                curr_y += pos.y_advance / 64.0
+        else:
+            draw = ImageDraw.Draw(img)
+            kwargs = {}
+            if PIL_HAS_RAQM:
+                kwargs['layout_engine'] = ImageFont.Layout.RAQM
+                kwargs['direction'] = 'ltr'
+            draw.text((x, y), text, fill=fill, font=self.pil_font, **kwargs)
+
+    def wrap_words(self, text, max_width):
+        if not text:
+            return []
+        cleaned = " ".join(text.split())
+        words = cleaned.split(" ")
+        lines = []
+        current_line = []
+        for word in words:
+            test_line = " ".join(current_line + [word])
+            line_w = self.get_width(test_line)
+            if line_w <= max_width:
+                current_line.append(word)
+            else:
+                if current_line:
+                    lines.append(current_line)
+                    current_line = [word]
+                else:
+                    lines.append([word])
+                    current_line = []
+        if current_line:
+            lines.append(current_line)
+        return lines
+
+    def draw_justified(self, img, words, x, y, fill, target_w, is_last=False):
+        if not words:
+            return
+        if is_last or len(words) == 1:
+            self.draw_text(img, (x, y), " ".join(words), fill=fill)
+            return
+
+        word_widths = [self.get_width(w) for w in words]
+        total_w = sum(word_widths)
+        space_needed = target_w - total_w
+        num_spaces = len(words) - 1
+        space_w = self.get_width(" ")
+        normal_space_w = max(space_w, 1.0)
+        avg_space = space_needed / num_spaces if num_spaces > 0 else normal_space_w
+
+        if avg_space > normal_space_w * 3.0:
+            self.draw_text(img, (x, y), " ".join(words), fill=fill)
+            return
+
+        curr_x = float(x)
+        for w, ww in zip(words, word_widths):
+            self.draw_text(img, (curr_x, y), w, fill=fill)
+            curr_x += ww + avg_space
+
+
+def get_font(family, size, bold=False):
+    p = resolve_font_path(family, bold=bold)
+    return ShapedFont(p, size, bold=bold)
+
 
 def generate_posters(payload):
     bg_file = find_bg_image()
@@ -153,22 +270,22 @@ def generate_posters(payload):
     # -------------------------------------------------------------
     # PAGE 1 RENDER
     # -------------------------------------------------------------
-    bg1 = Image.open(bg_file).convert("RGB").resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
+    bg1 = Image.open(bg_file).convert("RGBA").resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
     draw1 = ImageDraw.Draw(bg1)
 
     h_title = "Today's Hukamnama from Sri Darbar Sahib, Sri Amritsar."
-    bbox = draw1.textbbox((0, 0), h_title, font=f_header_title)
-    draw1.text((CENTER_X - (bbox[2] - bbox[0]) / 2, 58), h_title, fill="#9e1b1b", font=f_header_title)
+    bbox = f_header_title.get_bbox((0, 0), h_title)
+    f_header_title.draw_text(bg1, (CENTER_X - (bbox[2] - bbox[0]) / 2, 58), h_title, fill="#9e1b1b")
 
     h_date = payload.get("date_str") or "Today's Daily Hukamnama"
-    bbox = draw1.textbbox((0, 0), h_date, font=f_header_date)
-    draw1.text((CENTER_X - (bbox[2] - bbox[0]) / 2, 84), h_date, fill="#742a1a", font=f_header_date)
+    bbox = f_header_date.get_bbox((0, 0), h_date)
+    f_header_date.draw_text(bg1, (CENTER_X - (bbox[2] - bbox[0]) / 2, 84), h_date, fill="#742a1a")
 
     y = 122
     raag_punjabi = payload.get("raag_punjabi", "").strip()
     if raag_punjabi:
-        bbox = draw1.textbbox((0, 0), raag_punjabi, font=f_raag)
-        draw1.text((CENTER_X - (bbox[2] - bbox[0]) / 2, y), raag_punjabi, fill="#000000", font=f_raag)
+        bbox = f_raag.get_bbox((0, 0), raag_punjabi)
+        f_raag.draw_text(bg1, (CENTER_X - (bbox[2] - bbox[0]) / 2, y), raag_punjabi, fill="#000000")
         y += (bbox[3] - bbox[1]) + 14
     else:
         y += 10
@@ -176,17 +293,17 @@ def generate_posters(payload):
     mukhwak = payload.get("mukhwak", "").strip()
     LINE_H_MUKHWAK = 25.5
     if mukhwak:
-        mukhwak_lines = wrap_words(draw1, mukhwak, f_mukhwak, CONTENT_W)
+        mukhwak_lines = f_mukhwak.wrap_words(mukhwak, CONTENT_W)
         for idx, line_words in enumerate(mukhwak_lines):
             is_last = (idx == len(mukhwak_lines) - 1)
-            draw_justified(draw1, line_words, LEFT_X, y, f_mukhwak, "#000000", CONTENT_W, is_last=is_last)
+            f_mukhwak.draw_justified(bg1, line_words, LEFT_X, y, "#000000", CONTENT_W, is_last=is_last)
             y += LINE_H_MUKHWAK
 
     y += 18
     punjabi_date_str = payload.get("punjabi_date_str", "").strip()
     if punjabi_date_str:
-        bbox = draw1.textbbox((0, 0), punjabi_date_str, font=f_ang_date)
-        draw1.text((CENTER_X - (bbox[2] - bbox[0]) / 2, y), punjabi_date_str, fill="#000000", font=f_ang_date)
+        bbox = f_ang_date.get_bbox((0, 0), punjabi_date_str)
+        f_ang_date.draw_text(bg1, (CENTER_X - (bbox[2] - bbox[0]) / 2, y), punjabi_date_str, fill="#000000")
         y += (bbox[3] - bbox[1]) + 20
 
     viakhya = payload.get("viakhya", "").strip()
@@ -196,23 +313,23 @@ def generate_posters(payload):
 
     if viakhya:
         viakhya_head = "ਪੰਜਾਬੀ ਵਿਆਖਿਆ:"
-        draw1.text((LEFT_X, y), viakhya_head, fill="#000000", font=f_viakhya_head)
-        bbox = draw1.textbbox((LEFT_X, y), viakhya_head, font=f_viakhya_head)
+        f_viakhya_head.draw_text(bg1, (LEFT_X, y), viakhya_head, fill="#000000")
+        bbox = f_viakhya_head.get_bbox((LEFT_X, y), viakhya_head)
         draw1.line([(LEFT_X, bbox[3] + 2), (bbox[2], bbox[3] + 2)], fill="#000000", width=1)
         y += 32
 
-        viakhya_lines = wrap_words(draw1, viakhya, f_viakhya_body, CONTENT_W)
+        viakhya_lines = f_viakhya_body.wrap_words(viakhya, CONTENT_W)
         for idx, line_words in enumerate(viakhya_lines):
             if y + LINE_H_VIAKHYA > MAX_PAGE1_Y:
                 overflow_viakhya = viakhya_lines[idx:]
                 break
             is_last = (idx == len(viakhya_lines) - 1)
-            draw_justified(draw1, line_words, LEFT_X, y, f_viakhya_body, "#111111", CONTENT_W, is_last=is_last)
+            f_viakhya_body.draw_justified(bg1, line_words, LEFT_X, y, "#111111", CONTENT_W, is_last=is_last)
             y += LINE_H_VIAKHYA
 
     out_p1 = payload.get("output_p1") or os.path.join(BASE_DIR, "public", "uploads", "test_poster_p1.jpg")
     os.makedirs(os.path.dirname(os.path.abspath(out_p1)), exist_ok=True)
-    bg1.save(out_p1, quality=95)
+    bg1.convert("RGB").save(out_p1, quality=95)
     print(f"Page 1 successfully saved: {out_p1}")
 
     # -------------------------------------------------------------
@@ -228,45 +345,45 @@ def generate_posters(payload):
             out_p2 = f"{base_part}-2{ext}"
 
     if english or overflow_viakhya:
-        bg2 = Image.open(bg_file).convert("RGB").resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
+        bg2 = Image.open(bg_file).convert("RGBA").resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
         draw2 = ImageDraw.Draw(bg2)
         y2 = 62
 
         if overflow_viakhya:
             for idx, line_words in enumerate(overflow_viakhya):
                 is_last = (idx == len(overflow_viakhya) - 1)
-                draw_justified(draw2, line_words, LEFT_X, y2, f_viakhya_body, "#111111", CONTENT_W, is_last=is_last)
+                f_viakhya_body.draw_justified(bg2, line_words, LEFT_X, y2, "#111111", CONTENT_W, is_last=is_last)
                 y2 += LINE_H_VIAKHYA
             y2 += 22
 
         eng_head = "English Translation:"
-        draw2.text((LEFT_X, y2), eng_head, fill="#000000", font=f_eng_head)
-        bbox = draw2.textbbox((LEFT_X, y2), eng_head, font=f_eng_head)
+        f_eng_head.draw_text(bg2, (LEFT_X, y2), eng_head, fill="#000000")
+        bbox = f_eng_head.get_bbox((LEFT_X, y2), eng_head)
         draw2.line([(LEFT_X, bbox[3] + 2), (bbox[2], bbox[3] + 2)], fill="#000000", width=1)
         y2 += 30
 
         raag_english = payload.get("raag_english", "").strip()
         if raag_english:
-            bbox = draw2.textbbox((0, 0), raag_english, font=f_eng_raag)
-            draw2.text((CENTER_X - (bbox[2] - bbox[0]) / 2, y2), raag_english, fill="#000000", font=f_eng_raag)
+            bbox = f_eng_raag.get_bbox((0, 0), raag_english)
+            f_eng_raag.draw_text(bg2, (CENTER_X - (bbox[2] - bbox[0]) / 2, y2), raag_english, fill="#000000")
             y2 += 28
 
         if english:
-            eng_lines = wrap_words(draw2, english, f_eng_body, CONTENT_W)
+            eng_lines = f_eng_body.wrap_words(english, CONTENT_W)
             LINE_H_ENG = 20.0
             for idx, line_words in enumerate(eng_lines):
                 is_last = (idx == len(eng_lines) - 1)
-                draw_justified(draw2, line_words, LEFT_X, y2, f_eng_body, "#111111", CONTENT_W, is_last=is_last)
+                f_eng_body.draw_justified(bg2, line_words, LEFT_X, y2, "#111111", CONTENT_W, is_last=is_last)
                 y2 += LINE_H_ENG
 
         english_date_str = payload.get("english_date_str", "").strip()
         if english_date_str:
             y2 += 24
-            bbox = draw2.textbbox((0, 0), english_date_str, font=f_eng_date)
-            draw2.text((CENTER_X - (bbox[2] - bbox[0]) / 2, y2), english_date_str, fill="#000000", font=f_eng_date)
+            bbox = f_eng_date.get_bbox((0, 0), english_date_str)
+            f_eng_date.draw_text(bg2, (CENTER_X - (bbox[2] - bbox[0]) / 2, y2), english_date_str, fill="#000000")
 
         os.makedirs(os.path.dirname(os.path.abspath(out_p2)), exist_ok=True)
-        bg2.save(out_p2, quality=95)
+        bg2.convert("RGB").save(out_p2, quality=95)
         print(f"Page 2 successfully saved: {out_p2}")
         return out_p1, out_p2
 

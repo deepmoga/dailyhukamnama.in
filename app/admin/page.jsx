@@ -5,7 +5,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import Link from 'next/link';
 import { 
   FileText, BookOpen, Users, PlusCircle, 
-  ArrowUpRight, Clock, Sparkles, CheckCircle2, ChevronRight
+  ArrowUpRight, Clock, Sparkles, CheckCircle2, ChevronRight, Image as ImageIcon
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -70,6 +70,13 @@ export default function AdminDashboard() {
               <span>Create New Page</span>
             </Link>
             <Link
+              href="/admin/poster-template"
+              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow-md transition"
+            >
+              <ImageIcon className="w-4 h-4" />
+              <span>Poster Template</span>
+            </Link>
+            <Link
               href="/admin/volunteers"
               className="inline-flex items-center space-x-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold border border-slate-700 transition"
             >
@@ -80,7 +87,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -89,7 +96,7 @@ export default function AdminDashboard() {
               <h3 className="text-2xl font-bold text-slate-900 mt-1">
                 {loading ? '...' : stats.pages}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-1">about-hukam, harmandir-sahib, etc.</p>
+              <p className="text-[11px] text-slate-400 mt-1">about-hukam, etc.</p>
             </div>
             <div className="w-12 h-12 bg-amber-50 border border-amber-200 text-gold-600 rounded-xl flex items-center justify-center">
               <FileText className="w-6 h-6" />
@@ -104,7 +111,7 @@ export default function AdminDashboard() {
               <h3 className="text-2xl font-bold text-slate-900 mt-1">
                 {loading ? '...' : stats.paths}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-1">japji-sahib, custom paths</p>
+              <p className="text-[11px] text-slate-400 mt-1">japji-sahib, custom</p>
             </div>
             <div className="w-12 h-12 bg-blue-50 border border-blue-200 text-blue-600 rounded-xl flex items-center justify-center">
               <BookOpen className="w-6 h-6" />
@@ -119,12 +126,30 @@ export default function AdminDashboard() {
               <h3 className="text-2xl font-bold text-slate-900 mt-1">
                 {loading ? '...' : stats.volunteers}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-1">Displayed on frontend table</p>
+              <p className="text-[11px] text-slate-400 mt-1">Frontend directory</p>
             </div>
             <div className="w-12 h-12 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-xl flex items-center justify-center">
               <Users className="w-6 h-6" />
             </div>
           </div>
+
+          <Link
+            href="/admin/poster-template"
+            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between hover:border-gold-400 hover:shadow-md transition group"
+          >
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-gold-600">
+                Poster Template
+              </p>
+              <h3 className="text-sm font-bold text-slate-900 mt-1 flex items-center space-x-1">
+                <span>bg.jpg Template</span>
+              </h3>
+              <p className="text-[11px] text-gold-600 mt-1 font-semibold group-hover:underline">Update Image →</p>
+            </div>
+            <div className="w-12 h-12 bg-purple-50 border border-purple-200 text-purple-600 rounded-xl flex items-center justify-center group-hover:bg-gold-50 group-hover:border-gold-300 group-hover:text-gold-600 transition">
+              <ImageIcon className="w-6 h-6" />
+            </div>
+          </Link>
         </div>
 
         {/* Quick Pages List */}
