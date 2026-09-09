@@ -6,7 +6,7 @@ import Link from 'next/link';
 import RichTextEditor from './RichTextEditor';
 import { 
   ArrowLeft, Save, Loader2, Sparkles, 
-  Globe, Search, ExternalLink, HelpCircle, Volume2
+  Globe, Search, ExternalLink, HelpCircle, Volume2, Plus, Trash2, Link as LinkIcon
 } from 'lucide-react';
 
 export default function PageForm({ initialData = {}, isEdit = false }) {
@@ -24,6 +24,34 @@ export default function PageForm({ initialData = {}, isEdit = false }) {
   const [punjabiTitle, setPunjabiTitle] = useState(initialData.punjabi_title || '');
   const [audioUrl, setAudioUrl] = useState(initialData.audio_url || '');
   const [uploadingAudio, setUploadingAudio] = useState(false);
+
+  // Related page buttons (e.g. Hindi, English versions)
+  const initialButtons = () => {
+    if (!initialData.related_buttons) return [];
+    if (Array.isArray(initialData.related_buttons)) return initialData.related_buttons;
+    try {
+      return JSON.parse(initialData.related_buttons);
+    } catch (e) {
+      return [];
+    }
+  };
+  const [relatedButtons, setRelatedButtons] = useState(initialButtons);
+
+  const addRelatedButton = (name = '', link = '') => {
+    setRelatedButtons((prev) => [...prev, { name, link }]);
+  };
+
+  const updateRelatedButton = (index, field, value) => {
+    setRelatedButtons((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const removeRelatedButton = (index) => {
+    setRelatedButtons((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -84,6 +112,7 @@ export default function PageForm({ initialData = {}, isEdit = false }) {
         author: author || null,
         punjabi_title: punjabiTitle || null,
         audio_url: audioUrl || null,
+        related_buttons: relatedButtons.filter((b) => b.name?.trim() || b.link?.trim()),
       };
 
       const url = isEdit ? `/api/admin/pages/${initialData.id}` : '/api/admin/pages';
@@ -281,6 +310,106 @@ export default function PageForm({ initialData = {}, isEdit = false }) {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Language Version & Related Page Links / Buttons */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <Globe className="w-4 h-4 text-gold-600" />
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Language & Related Page Buttons
+                  </h4>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Add buttons displayed at the top of this page so visitors can switch to other language versions (e.g. Hindi, English) or related prayers.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => addRelatedButton('', '')}
+                className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-gold-50 hover:bg-gold-100 text-gold-700 border border-gold-300 rounded-xl text-xs font-semibold transition self-start sm:self-auto"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Button</span>
+              </button>
+            </div>
+
+            {/* Quick Preset Buttons */}
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              <span className="text-[11px] text-slate-400 font-medium">Quick add preset:</span>
+              <button
+                type="button"
+                onClick={() => addRelatedButton('Hindi', '/japji-sahib-in-hindi')}
+                className="px-2.5 py-1 text-[11px] bg-slate-100 hover:bg-gold-50 hover:text-gold-700 text-slate-600 rounded-lg border border-slate-200 transition font-medium"
+              >
+                + Hindi (/japji-sahib-in-hindi)
+              </button>
+              <button
+                type="button"
+                onClick={() => addRelatedButton('English', '/japji-sahib-in-english')}
+                className="px-2.5 py-1 text-[11px] bg-slate-100 hover:bg-gold-50 hover:text-gold-700 text-slate-600 rounded-lg border border-slate-200 transition font-medium"
+              >
+                + English (/japji-sahib-in-english)
+              </button>
+              <button
+                type="button"
+                onClick={() => addRelatedButton('Punjabi Gurmukhi', '/japji-sahib-in-punjabi-gurmukhi')}
+                className="px-2.5 py-1 text-[11px] bg-slate-100 hover:bg-gold-50 hover:text-gold-700 text-slate-600 rounded-lg border border-slate-200 transition font-medium"
+              >
+                + Punjabi Gurmukhi
+              </button>
+            </div>
+
+            {relatedButtons.length === 0 ? (
+              <div className="text-center py-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                <p className="text-xs text-slate-500 font-medium">No language or related buttons added yet.</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Click &quot;Add Button&quot; or a quick preset above to link Hindi, English, or other versions.</p>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-1">
+                {relatedButtons.map((btn, index) => (
+                  <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 p-3 bg-slate-50/80 border border-slate-200 rounded-xl">
+                    <div className="w-full sm:w-1/3">
+                      <label className="block text-[10px] font-semibold text-slate-500 mb-1">
+                        Button Name (e.g. Hindi)
+                      </label>
+                      <input
+                        type="text"
+                        value={btn.name}
+                        onChange={(e) => updateRelatedButton(index, 'name', e.target.value)}
+                        placeholder="e.g. Hindi or English"
+                        className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-gold-500 outline-none font-semibold text-slate-800"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-[10px] font-semibold text-slate-500 mb-1">
+                        Page Link / URL (e.g. /japji-sahib-in-hindi)
+                      </label>
+                      <input
+                        type="text"
+                        value={btn.link}
+                        onChange={(e) => updateRelatedButton(index, 'link', e.target.value)}
+                        placeholder="e.g. /japji-sahib-in-hindi"
+                        className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-gold-500 outline-none font-mono text-slate-700"
+                      />
+                    </div>
+                    <div className="sm:self-end pb-0.5">
+                      <button
+                        type="button"
+                        onClick={() => removeRelatedButton(index)}
+                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
+                        title="Delete Button"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

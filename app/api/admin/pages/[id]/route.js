@@ -21,7 +21,7 @@ export async function PUT(request, { params }) {
   try {
     const { id } = params;
     const data = await request.json();
-    let { title, slug, content, meta_title, meta_desc, meta_keywords, page_type, author, punjabi_title, audio_url } = data;
+    let { title, slug, content, meta_title, meta_desc, meta_keywords, page_type, author, punjabi_title, audio_url, related_buttons } = data;
 
     if (!title) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -36,9 +36,13 @@ export async function PUT(request, { params }) {
       }
     }
 
+    const buttonsJson = related_buttons 
+      ? (typeof related_buttons === 'string' ? related_buttons : JSON.stringify(related_buttons))
+      : null;
+
     await pool.query(
       `UPDATE pages 
-       SET title = ?, slug = ?, content = ?, meta_title = ?, meta_desc = ?, meta_keywords = ?, page_type = ?, author = ?, punjabi_title = ?, audio_url = ?
+       SET title = ?, slug = ?, content = ?, meta_title = ?, meta_desc = ?, meta_keywords = ?, page_type = ?, author = ?, punjabi_title = ?, audio_url = ?, related_buttons = ?
        WHERE id = ?`,
       [
         title,
@@ -51,6 +55,7 @@ export async function PUT(request, { params }) {
         author || null,
         punjabi_title || null,
         audio_url || null,
+        buttonsJson,
         id,
       ]
     );

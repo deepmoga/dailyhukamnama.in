@@ -37,6 +37,13 @@ async function setup() {
     // column already exists
   }
 
+  // Ensure related_buttons column exists
+  try {
+    await conn.query(`ALTER TABLE pages ADD COLUMN related_buttons TEXT NULL AFTER audio_url;`);
+  } catch (e) {
+    // column already exists
+  }
+
 
   // 2. volunteers table
   await conn.query(`

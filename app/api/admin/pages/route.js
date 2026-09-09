@@ -9,7 +9,7 @@ export async function GET(request) {
     const type = searchParams.get('type');
     const search = searchParams.get('search');
 
-    let query = 'SELECT id, title, slug, meta_title, meta_desc, meta_keywords, page_type, author, punjabi_title, audio_url, created_at, updated_at FROM pages';
+    let query = 'SELECT id, title, slug, meta_title, meta_desc, meta_keywords, page_type, author, punjabi_title, audio_url, related_buttons, created_at, updated_at FROM pages';
     const params = [];
 
     const conditions = [];
@@ -39,7 +39,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const data = await request.json();
-    let { title, slug, content, meta_title, meta_desc, meta_keywords, page_type, author, punjabi_title, audio_url } = data;
+    let { title, slug, content, meta_title, meta_desc, meta_keywords, page_type, author, punjabi_title, audio_url, related_buttons } = data;
 
     if (!title) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -57,9 +57,13 @@ export async function POST(request) {
       slug = `${slug}-${Date.now().toString().slice(-4)}`;
     }
 
+    const buttonsJson = related_buttons 
+      ? (typeof related_buttons === 'string' ? related_buttons : JSON.stringify(related_buttons))
+      : null;
+
     const [result] = await pool.query(
-      `INSERT INTO pages (title, slug, content, meta_title, meta_desc, meta_keywords, page_type, author, punjabi_title, audio_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO pages (title, slug, content, meta_title, meta_desc, meta_keywords, page_type, author, punjabi_title, audio_url, related_buttons)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         title,
         slug,
@@ -71,6 +75,7 @@ export async function POST(request) {
         author || null,
         punjabi_title || null,
         audio_url || null,
+        buttonsJson,
       ]
     );
 

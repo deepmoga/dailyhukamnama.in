@@ -4,7 +4,7 @@ import PathAudioPlayer from '@/components/PathAudioPlayer';
 import pool from '@/lib/db';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { BookOpen, Calendar, Share2, Sparkles, ChevronRight, User } from 'lucide-react';
+import { BookOpen, Calendar, Share2, Sparkles, ChevronRight, User, Languages, ExternalLink } from 'lucide-react';
 
 async function getPageData(slug) {
   try {
@@ -41,6 +41,19 @@ export default async function DynamicSlugPage({ params }) {
   }
 
   const isPath = page.page_type === 'path';
+
+  let relatedButtons = [];
+  if (page.related_buttons) {
+    try {
+      relatedButtons = typeof page.related_buttons === 'string'
+        ? JSON.parse(page.related_buttons)
+        : page.related_buttons;
+    } catch (e) {
+      relatedButtons = [];
+    }
+  }
+  if (!Array.isArray(relatedButtons)) relatedButtons = [];
+  relatedButtons = relatedButtons.filter((b) => b && b.name && b.link);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#fdfbf7]">
@@ -99,6 +112,31 @@ export default async function DynamicSlugPage({ params }) {
                 title={page.title}
                 punjabiTitle={page.punjabi_title}
               />
+            </div>
+          )}
+
+          {/* Language & Related Page Buttons */}
+          {relatedButtons.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 p-3.5 bg-amber-50/60 border border-amber-200/80 rounded-xl">
+              <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-900 uppercase tracking-wider mr-1">
+                <Languages className="w-4 h-4 text-gold-600" />
+                <span>Read in:</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {relatedButtons.map((btn, idx) => {
+                  const href = btn.link.startsWith('/') || btn.link.startsWith('http') ? btn.link : `/${btn.link}`;
+                  return (
+                    <Link
+                      key={idx}
+                      href={href}
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-white hover:bg-gold-500 hover:text-white text-slate-800 text-xs font-semibold rounded-lg border border-amber-300/80 shadow-xs transition-all duration-150 group"
+                    >
+                      <span>{btn.name}</span>
+                      <ExternalLink className="w-3 h-3 text-gold-600 group-hover:text-white transition" />
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           )}
 
