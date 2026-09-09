@@ -6,6 +6,9 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { BookOpen, Calendar, Share2, Sparkles, ChevronRight, User, Languages, ExternalLink } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function getPageData(slug) {
   try {
     const cleanSlug = slug.toLowerCase().trim();
