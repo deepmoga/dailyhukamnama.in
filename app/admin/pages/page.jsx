@@ -39,6 +39,8 @@ function PagesManagementContent() {
         url += '?type=path';
       } else if (activeTab === 'page') {
         url += '?type=page';
+      } else if (activeTab === 'sikh_guru') {
+        url += '?type=sikh_guru';
       }
 
       const res = await fetch(url);
@@ -94,22 +96,24 @@ function PagesManagementContent() {
               Pages & Path Manager
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Create and manage content for about-hukam, sikh-gurus, path pages, and custom slugs
+              Create and manage content for about-hukam, sikh-gurus, path pages, menu sort orders, and visibility
             </p>
           </div>
 
-          <Link
-            href="/admin/pages/new"
-            className="inline-flex items-center space-x-2 px-4 py-2.5 bg-gold-500 hover:bg-gold-600 text-white rounded-xl text-xs font-semibold shadow-md transition self-start sm:self-auto"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>+ Add New Page / Path</span>
-          </Link>
+          <div className="flex items-center space-x-3">
+            <Link
+              href="/admin/pages/new"
+              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-gold-500 hover:bg-gold-600 text-white rounded-xl text-xs font-semibold shadow transition"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Create New Page / Path</span>
+            </Link>
+          </div>
         </div>
 
         {/* Filter Tabs & Search */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center space-x-1 p-1 bg-slate-100 rounded-xl w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 rounded-xl w-full sm:w-auto">
             <button
               onClick={() => setActiveTab('all')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
@@ -121,16 +125,6 @@ function PagesManagementContent() {
               All Pages
             </button>
             <button
-              onClick={() => setActiveTab('page')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                activeTab === 'page'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Standard Pages
-            </button>
-            <button
               onClick={() => setActiveTab('path')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
                 activeTab === 'path'
@@ -139,6 +133,26 @@ function PagesManagementContent() {
               }`}
             >
               Nitnem Path Pages
+            </button>
+            <button
+              onClick={() => setActiveTab('sikh_guru')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                activeTab === 'sikh_guru'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Sikh Gurus
+            </button>
+            <button
+              onClick={() => setActiveTab('page')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                activeTab === 'page'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Standard Pages
             </button>
           </div>
 
@@ -184,6 +198,7 @@ function PagesManagementContent() {
                     <th className="px-5 py-3">Title & Meta</th>
                     <th className="px-5 py-3">URL Slug</th>
                     <th className="px-5 py-3">Type</th>
+                    <th className="px-5 py-3">Menu Visibility & Order</th>
                     <th className="px-5 py-3">Last Modified</th>
                     <th className="px-5 py-3 text-right">Actions</th>
                   </tr>
@@ -212,10 +227,33 @@ function PagesManagementContent() {
                         <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
                           page.page_type === 'path'
                             ? 'bg-blue-100 text-blue-800'
+                            : page.page_type === 'sikh_guru'
+                            ? 'bg-purple-100 text-purple-800'
                             : 'bg-amber-100 text-amber-800'
                         }`}>
-                          {page.page_type === 'path' ? 'Nitnem Path' : 'Standard Page'}
+                          {page.page_type === 'path' 
+                            ? 'Nitnem Path' 
+                            : page.page_type === 'sikh_guru' 
+                            ? 'Sikh Guru' 
+                            : 'Standard Page'}
                         </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold w-fit ${
+                            page.show_in_menu 
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                              : 'bg-slate-100 text-slate-500 border border-slate-200'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${page.show_in_menu ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                            <span>{page.show_in_menu ? 'In Menu' : 'Hidden from Menu'}</span>
+                          </span>
+                          {page.show_in_menu ? (
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              Order: <strong className="text-slate-800 font-bold">{page.sort_order ?? 0}</strong>
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="px-5 py-3.5 text-slate-500">
                         {new Date(page.updated_at || page.created_at).toLocaleDateString('en-US', {

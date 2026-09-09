@@ -44,6 +44,20 @@ async function setup() {
     // column already exists
   }
 
+  // Ensure show_in_menu column exists
+  try {
+    await conn.query(`ALTER TABLE pages ADD COLUMN show_in_menu TINYINT(1) NOT NULL DEFAULT 1 AFTER related_buttons;`);
+  } catch (e) {
+    // column already exists
+  }
+
+  // Ensure sort_order column exists
+  try {
+    await conn.query(`ALTER TABLE pages ADD COLUMN sort_order INT NOT NULL DEFAULT 0 AFTER show_in_menu;`);
+  } catch (e) {
+    // column already exists
+  }
+
 
   // 2. volunteers table
   await conn.query(`

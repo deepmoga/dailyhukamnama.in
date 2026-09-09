@@ -3,22 +3,46 @@ import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { sikhGurusData } from '@/lib/gurus-data';
+import pool from '@/lib/db';
 import { Sparkles, MapPin, Calendar, BookOpen, CheckCircle2, ChevronLeft } from 'lucide-react';
 
-export async function generateStaticParams() {
-  const params = sikhGurusData.map((guru) => ({
-    slug: guru.slug,
-  }));
-  params.push({ slug: 'guru-granth-sahib-ji' });
-  return params;
-}
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-function getGuru(slug) {
+async function getGuru(slug) {
+  const cleanSlug = slug.toLowerCase().trim();
+  try {
+    const [rows] = await pool.query(
+      "SELECT * FROM pages WHERE (slug = ? OR slug = ? OR slug = ?) AND page_type = 'sikh_guru'",
+      [cleanSlug, `sikh-gurus/${cleanSlug}`, cleanSlug.replace('sikh-gurus/', '')]
+    );
+    if (rows.length > 0) {
+      const row = rows[0];
+      const staticData = sikhGurusData.find((g) => g.slug === cleanSlug || (cleanSlug === 'guru-granth-sahib-ji' && g.slug === 'sri-guru-granth-sahib-ji')) || {};
+      return {
+        id: row.sort_order || staticData.id || 1,
+        name: row.title,
+        punjabiName: row.punjabi_title || staticData.punjabiName || '',
+        dates: row.author || staticData.dates || '',
+        guruship: staticData.guruship || row.author || '',
+        birthPlace: staticData.birthPlace || '',
+        jotiJotPlace: staticData.jotiJotPlace || '',
+        baniCount: staticData.baniCount || '',
+        summary: row.meta_desc || staticData.summary || '',
+        coreTeachings: staticData.coreTeachings || [],
+        biography: row.content || staticData.biography || '',
+        isHtmlContent: !!row.content,
+        majorBanis: staticData.majorBanis || [],
+      };
+    }
+  } catch (e) {
+    console.error('Error fetching guru from DB:', e);
+  }
   return sikhGurusData.find((g) => g.slug === slug || (slug === 'guru-granth-sahib-ji' && g.slug === 'sri-guru-granth-sahib-ji'));
 }
 
 export async function generateMetadata({ params }) {
-  const guru = getGuru(params.slug);
+  const guru = await getGuru(params.slug);
   if (!guru) return { title: 'Guru Not Found' };
   return {
     title: `${guru.name} (${guru.dates}) | Biography & Teachings`,
@@ -26,8 +50,8 @@ export async function generateMetadata({ params }) {
   };
 }
 
-export default function GuruDetailPage({ params }) {
-  const guru = getGuru(params.slug);
+export default async function GuruDetailPage({ params }) {
+  const guru = await getGuru(params.slug);
 
   if (!guru) {
     notFound();
@@ -116,9 +140,23 @@ export default function GuruDetailPage({ params }) {
               Life History & Divine Mission
             </h2>
           </div>
-          <div className="text-slate-700 leading-relaxed space-y-4 whitespace-pre-line text-base">
-            {guru.biography}
-          </div>
+          {guru.isHtmlContent ? (
+            <div 
+              className="prose prose-slate max-w-none 
+                prose-headings:font-serif-heading prose-headings:text-slate-900 
+                prose-h2:text-2xl prose-h2:border-b prose-h2:border-gold-200 prose-h2:pb-2 
+                prose-h3:text-xl 
+                prose-p:text-slate-700 prose-p:leading-relaxed prose-p:text-base 
+                prose-strong:text-slate-900 
+                prose-blockquote:border-gold-500 prose-blockquote:bg-gold-50/50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-xl
+                prose-img:rounded-xl prose-img:shadow-md prose-img:border prose-img:border-slate-200"
+              dangerouslySetInnerHTML={{ __html: guru.biography }}
+            />
+          ) : (
+            <div className="text-slate-700 leading-relaxed space-y-4 whitespace-pre-line text-base">
+              {guru.biography}
+            </div>
+          )}
         </div>
 
         {/* Major Banis / Compositions */}

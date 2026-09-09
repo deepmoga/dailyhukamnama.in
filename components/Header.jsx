@@ -20,6 +20,7 @@ export default function Header() {
   const [pathOpen, setPathOpen] = useState(false);
   const [currentDateStr, setCurrentDateStr] = useState('');
   const [dbPaths, setDbPaths] = useState([]);
+  const [dbGurus, setDbGurus] = useState([]);
 
   useEffect(() => {
     const today = new Date();
@@ -31,19 +32,29 @@ export default function Header() {
     });
     setCurrentDateStr(formatted);
 
-    // Fetch dynamic paths created in admin
-    async function loadPaths() {
+    // Fetch dynamic paths & gurus created in admin
+    async function loadNavigation() {
       try {
         const res = await fetch('/api/public/paths');
         const data = await res.json();
-        if (data.paths && data.paths.length > 0) {
+        if (data.paths) {
           setDbPaths(data.paths);
         }
       } catch (err) {
-        // use fallback
+        // fallback
+      }
+
+      try {
+        const gRes = await fetch('/api/public/sikh-gurus');
+        const gData = await gRes.json();
+        if (gData.gurus && gData.gurus.length > 0) {
+          setDbGurus(gData.gurus);
+        }
+      } catch (err) {
+        // fallback
       }
     }
-    loadPaths();
+    loadNavigation();
   }, []);
 
   const sikhGurusList = [
@@ -59,6 +70,14 @@ export default function Header() {
     { name: 'Guru Gobind Singh Ji', dates: '1666-1708', href: '/sikh-gurus/guru-gobind-singh-ji' },
     { name: 'Sri Guru Granth Sahib Ji', dates: 'Eternal Living Guru', href: '/sikh-gurus/sri-guru-granth-sahib-ji' },
   ];
+
+  const effectiveGurus = dbGurus.length > 0
+    ? dbGurus.map((g) => ({
+        name: g.title,
+        dates: g.author || '',
+        href: g.slug.startsWith('sikh-gurus/') ? `/${g.slug}` : `/sikh-gurus/${g.slug}`,
+      }))
+    : sikhGurusList;
 
   const defaultPathList = [
     { name: 'Japji Sahib', punjabi: 'ਜਪੁਜੀ ਸਾਹਿਬ', href: '/japji-sahib-in-punjabi-gurmukhi' },
@@ -225,7 +244,7 @@ export default function Header() {
                         <Link href="/sikh-gurus" className="text-[10px] text-gold-600 hover:underline">View All</Link>
                       </div>
                       <div className="max-h-80 overflow-y-auto">
-                        {sikhGurusList.map((guru, index) => (
+                        {effectiveGurus.map((guru, index) => (
                           <Link 
                             key={index} 
                             href={guru.href}
@@ -366,9 +385,9 @@ export default function Header() {
             </button>
             {sikhGurusOpen && (
               <div className="pl-4 pr-2 space-y-1 py-1">
-                {sikhGurusList.map((guru, index) => (
-                  <Link
-                    key={index}
+                {effectiveGurus.map((guru, index) => (
+                  <Link 
+                    key={index} 
                     href={guru.href}
                     onClick={() => setMobileMenuOpen(false)}
                     className="block px-3 py-1.5 text-xs text-slate-600 hover:text-gold-600"

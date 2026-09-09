@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const [rows] = await pool.query(
-      "SELECT id, title, slug, punjabi_title, author, audio_url FROM pages WHERE page_type = 'path' ORDER BY id ASC"
+      "SELECT id, title, slug, punjabi_title, author, audio_url, sort_order FROM pages WHERE page_type = 'path' AND show_in_menu = 1 ORDER BY sort_order ASC, id ASC"
     );
     return NextResponse.json({ success: true, paths: rows });
   } catch (err) {

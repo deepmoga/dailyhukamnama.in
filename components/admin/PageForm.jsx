@@ -6,7 +6,8 @@ import Link from 'next/link';
 import RichTextEditor from './RichTextEditor';
 import { 
   ArrowLeft, Save, Loader2, Sparkles, 
-  Globe, Search, ExternalLink, HelpCircle, Volume2, Plus, Trash2, Link as LinkIcon
+  Globe, Search, ExternalLink, HelpCircle, Volume2, Plus, Trash2, Link as LinkIcon,
+  Menu, ListOrdered
 } from 'lucide-react';
 
 export default function PageForm({ initialData = {}, isEdit = false }) {
@@ -24,6 +25,12 @@ export default function PageForm({ initialData = {}, isEdit = false }) {
   const [punjabiTitle, setPunjabiTitle] = useState(initialData.punjabi_title || '');
   const [audioUrl, setAudioUrl] = useState(initialData.audio_url || '');
   const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [showInMenu, setShowInMenu] = useState(
+    initialData.show_in_menu !== undefined ? Boolean(initialData.show_in_menu) : true
+  );
+  const [sortOrder, setSortOrder] = useState(
+    initialData.sort_order !== undefined ? initialData.sort_order : 0
+  );
 
   // Related page buttons (e.g. Hindi, English versions)
   const initialButtons = () => {
@@ -113,6 +120,8 @@ export default function PageForm({ initialData = {}, isEdit = false }) {
         punjabi_title: punjabiTitle || null,
         audio_url: audioUrl || null,
         related_buttons: relatedButtons.filter((b) => b.name?.trim() || b.link?.trim()),
+        show_in_menu: showInMenu ? 1 : 0,
+        sort_order: parseInt(sortOrder, 10) || 0,
       };
 
       const url = isEdit ? `/api/admin/pages/${initialData.id}` : '/api/admin/pages';
@@ -470,6 +479,73 @@ export default function PageForm({ initialData = {}, isEdit = false }) {
                   <p className="text-[10px] text-slate-500">For /japji-sahib-in-punjabi-gurmukhi/ and other prayer pages</p>
                 </div>
               </label>
+
+              <label className="flex items-center space-x-3 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="radio"
+                  name="pageType"
+                  value="sikh_guru"
+                  checked={pageType === 'sikh_guru'}
+                  onChange={() => setPageType('sikh_guru')}
+                  className="text-gold-500 focus:ring-gold-500"
+                />
+                <div>
+                  <p className="text-xs font-semibold text-slate-900">Sikh Guru Page</p>
+                  <p className="text-[10px] text-slate-500">For individual Sikh Guru profiles (shows in Sikh Gurus dropdown)</p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Menu Visibility & Sort Order Settings */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
+              <Menu className="w-4 h-4 text-gold-500" />
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Header Menu & Order
+              </h4>
+            </div>
+
+            {/* Show in Menu Toggle */}
+            <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/80">
+              <label className="flex items-start space-x-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={showInMenu}
+                  onChange={(e) => setShowInMenu(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 text-gold-600 rounded border-slate-300 focus:ring-gold-500 accent-gold-600"
+                />
+                <div>
+                  <span className="text-xs font-bold text-slate-800">
+                    Show in Menu Dropdown
+                  </span>
+                  <p className="text-[11px] text-slate-500 leading-snug mt-0.5">
+                    Uncheck this for alternative languages (e.g. Hindi, English) so they only open via buttons and do not crowd the main Path or Guru dropdown menus.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {/* Sort Order */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Menu Sort Order
+              </label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="number"
+                  min="0"
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                  className="w-24 px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold-500 focus:bg-white outline-none font-bold text-slate-800"
+                />
+                <span className="text-[11px] text-slate-500">
+                  (1 appears first, then 2, 3...)
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Controls the sequence of items in the Path or Sikh Gurus dropdown menu.
+              </p>
             </div>
           </div>
 
