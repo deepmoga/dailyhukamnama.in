@@ -1,238 +1,321 @@
 """
-generate_poster.py  –  Daily Hukamnama Poster Generator (Pillow only, no PyMuPDF/PDF)
-Usage:
-  python generate_poster.py <date_str> <output_path> [gurmukhi_text]
+generate_poster.py  –  Daily Hukamnama Poster Generator (2-Page Newspaper Template)
+Generates high-resolution social & archival posters on the user-provided bg.jpg template.
+Matches reference layout:
+ - Page 1: Header (English title & date), Punjabi Raag, Gurbani Mukhwak, Gurmukhi Date & Ang, Punjabi Viakhya
+ - Page 2: Punjabi Viakhya overflow, English Translation heading, English Raag, English Translation body, English Date & Page
 """
 
-import sys
 import os
-import textwrap
-import datetime
+import sys
+import json
+import base64
+import argparse
 from PIL import Image, ImageDraw, ImageFont
 
-# Asset paths (relative to project root)
-FRAME_PATH = os.path.join("public", "assets", "frame.png")
-LOGO_PATH  = os.path.join("public", "assets", "Logo.png")
+if sys.platform.startswith("win"):
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-# Windows font directory
-FONT_DIR = os.path.join(os.environ.get("SystemRoot", "C:/Windows"), "Fonts")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FONTS_DIR = os.path.join(BASE_DIR, "public", "assets", "fonts")
+WIN_FONTS = os.path.join(os.environ.get("SystemRoot", "C:/Windows"), "Fonts")
 
-# Bundled Gurmukhi font (downloaded from Google Fonts)
-GURMUKHI_FONT_PATH = os.path.join("public", "assets", "fonts", "NotoSansGurmukhi.ttf")
+def find_bg_image():
+    candidates = [
+        os.path.join(BASE_DIR, "assets", "images", "bg.jpg"),
+        os.path.join(BASE_DIR, "public", "assets", "images", "bg.jpg"),
+        os.path.join(BASE_DIR, "public", "assets", "bg.jpg"),
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return None
 
-# Canvas size (portrait social-media format)
-CANVAS_W = 1080
-CANVAS_H = 1350
-
-# Brand colors
-COLOR_GOLD   = "#b8962e"
-COLOR_DARK   = "#1a0a00"
-COLOR_ACCENT = "#dd9933"
-
-
-def load_font(name, size):
-    """Load a font from Windows Fonts dir; fall back to PIL default."""
-    path = os.path.join(FONT_DIR, name)
-    if os.path.exists(path):
-        try:
-            return ImageFont.truetype(path, size)
-        except Exception:
-            pass
-    # Try fallback fonts
-    for fallback in ["arial.ttf", "calibri.ttf", "segoeui.ttf"]:
-        p2 = os.path.join(FONT_DIR, fallback)
-        if os.path.exists(p2):
-            try:
-                return ImageFont.truetype(p2, size)
-            except Exception:
-                pass
+def get_font(family, size, bold=False):
+    """
+    Font loader prioritized for self-contained bundled fonts in public/assets/fonts/
+    with fallbacks for Windows and Linux.
+    """
+    if family == "gurmukhi_serif":
+        names = ["NotoSerifGurmukhi-Bold.ttf" if bold else "NotoSerifGurmukhi-Regular.ttf",
+                 "NotoSerifGurmukhi-Variable.ttf",
+                 "NotoSansGurmukhi-Bold.ttf" if bold else "NotoSansGurmukhi-Regular.ttf",
+                 "NotoSansGurmukhi.ttf"]
+        for name in names:
+            p = os.path.join(FONTS_DIR, name)
+            if os.path.exists(p):
+                try:
+                    return ImageFont.truetype(p, int(round(size)))
+                except Exception:
+                    pass
+    elif family == "serif":
+        names = ["timesbd.ttf" if bold else "times.ttf",
+                 "georgiab.ttf" if bold else "georgia.ttf",
+                 "NotoSerif-Bold.ttf" if bold else "NotoSerif-Regular.ttf"]
+        for name in names:
+            p_local = os.path.join(FONTS_DIR, name)
+            if os.path.exists(p_local):
+                try:
+                    return ImageFont.truetype(p_local, int(round(size)))
+                except Exception:
+                    pass
+            p_win = os.path.join(WIN_FONTS, name)
+            if os.path.exists(p_win):
+                try:
+                    return ImageFont.truetype(p_win, int(round(size)))
+                except Exception:
+                    pass
+            for linux_dir in ["/usr/share/fonts/truetype/msttcorefonts", "/usr/share/fonts/truetype/liberation", "/usr/share/fonts"]:
+                p_linux = os.path.join(linux_dir, name)
+                if os.path.exists(p_linux):
+                    try:
+                        return ImageFont.truetype(p_linux, int(round(size)))
+                    except Exception:
+                        pass
     try:
-        return ImageFont.load_default(size=size)
+        return ImageFont.load_default(size=int(round(size)))
     except Exception:
         return ImageFont.load_default()
 
-
-def draw_centered(draw, text, y, font, fill, max_w=None):
-    """Draw centered text. Returns y after text block."""
+def wrap_words(draw, text, font, max_width):
     if not text:
-        return y
-    max_w = max_w or CANVAS_W
-    try:
-        bbox = draw.textbbox((0, 0), text, font=font)
-        tw = bbox[2] - bbox[0]
-        th = bbox[3] - bbox[1]
-    except Exception:
-        tw = len(text) * 14
-        th = 20
-    x = (CANVAS_W - min(tw, max_w)) / 2
-    draw.text((x, y), text, fill=fill, font=font)
-    return y + th + 10
+        return []
+    cleaned = " ".join(text.split())
+    words = cleaned.split(" ")
+    lines = []
+    current_line = []
+    for word in words:
+        test_line = " ".join(current_line + [word])
+        bbox = draw.textbbox((0, 0), test_line, font=font)
+        if (bbox[2] - bbox[0]) <= max_width:
+            current_line.append(word)
+        else:
+            if current_line:
+                lines.append(current_line)
+                current_line = [word]
+            else:
+                lines.append([word])
+                current_line = []
+    if current_line:
+        lines.append(current_line)
+    return lines
 
+def draw_justified(draw, words, x, y, font, fill, target_w, is_last=False):
+    if not words:
+        return
+    if is_last or len(words) == 1:
+        draw.text((x, y), " ".join(words), fill=fill, font=font)
+        return
+    
+    word_widths = [draw.textbbox((0, 0), w, font=font)[2] - draw.textbbox((0, 0), w, font=font)[0] for w in words]
+    total_w = sum(word_widths)
+    space_needed = target_w - total_w
+    num_spaces = len(words) - 1
+    
+    space_bbox = draw.textbbox((0, 0), " ", font=font)
+    normal_space_w = max(space_bbox[2] - space_bbox[0], 1)
+    avg_space = space_needed / num_spaces if num_spaces > 0 else normal_space_w
+    
+    if avg_space > normal_space_w * 3.0:
+        draw.text((x, y), " ".join(words), fill=fill, font=font)
+        return
 
-def generate_poster(date_str=None, output_path="public/uploads/test_poster.jpg", gurmukhi_text=""):
-    # Ensure output dir exists
-    out_dir = os.path.dirname(output_path)
-    if out_dir:
-        os.makedirs(out_dir, exist_ok=True)
+    curr_x = x
+    for w, ww in zip(words, word_widths):
+        draw.text((curr_x, y), w, fill=fill, font=font)
+        curr_x += ww + avg_space
 
-    if not date_str:
-        date_str = datetime.datetime.now().strftime("%B %d, %Y - %A")
+def generate_posters(payload):
+    bg_file = find_bg_image()
+    if not bg_file:
+        raise FileNotFoundError("Background template bg.jpg not found in assets/images/bg.jpg or public/assets/images/bg.jpg")
 
-    # 1. Gradient background (warm cream → white)
-    canvas = Image.new("RGBA", (CANVAS_W, CANVAS_H), (255, 255, 255, 255))
-    draw   = ImageDraw.Draw(canvas)
-    for y in range(CANVAS_H):
-        t = y / CANVAS_H
-        r = int(255)
-        g = int(248 * (1 - t) + 255 * t)
-        b = int(225 * (1 - t) + 255 * t)
-        draw.line([(0, y), (CANVAS_W, y)], fill=(r, g, b, 255))
+    TARGET_W, TARGET_H = 724, 1024
+    LEFT_X = 54
+    RIGHT_X = 670
+    CONTENT_W = RIGHT_X - LEFT_X  # 616px
+    CENTER_X = TARGET_W / 2
 
-    # 2. Gold border
-    b = 22
-    draw.rectangle([b, b, CANVAS_W - b, CANVAS_H - b], outline=COLOR_ACCENT, width=5)
-    draw.rectangle([b + 9, b + 9, CANVAS_W - b - 9, CANVAS_H - b - 9], outline="#f0c060", width=1)
+    f_header_title = get_font("serif", 19, bold=True)
+    f_header_date  = get_font("serif", 14, bold=True)
+    f_raag         = get_font("gurmukhi_serif", 16, bold=True)
+    f_mukhwak      = get_font("gurmukhi_serif", 13.5, bold=False)
+    f_ang_date     = get_font("gurmukhi_serif", 13.5, bold=True)
+    f_viakhya_head = get_font("gurmukhi_serif", 14, bold=True)
+    f_viakhya_body = get_font("gurmukhi_serif", 13.8, bold=False)
 
-    # 3. Frame overlay
-    if os.path.exists(FRAME_PATH):
-        try:
-            frame = Image.open(FRAME_PATH).convert("RGBA")
-            frame = frame.resize((CANVAS_W, CANVAS_H), Image.Resampling.LANCZOS)
-            canvas.alpha_composite(frame)
-        except Exception as e:
-            print(f"Warning: frame load failed: {e}")
+    f_eng_head     = get_font("serif", 14.5, bold=True)
+    f_eng_raag     = get_font("serif", 13.5, bold=True)
+    f_eng_body     = get_font("serif", 12.8, bold=False)
+    f_eng_date     = get_font("serif", 13.5, bold=True)
 
-    draw = ImageDraw.Draw(canvas)
+    # -------------------------------------------------------------
+    # PAGE 1 RENDER
+    # -------------------------------------------------------------
+    bg1 = Image.open(bg_file).convert("RGB").resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
+    draw1 = ImageDraw.Draw(bg1)
 
-    # 4. Load fonts
-    f_date     = load_font("arial.ttf",    46)
-    f_title_en = load_font("timesbd.ttf",  42)
-    f_footer   = load_font("arialbd.ttf",  44)
-    f_web      = load_font("arial.ttf",    36)
+    h_title = "Today's Hukamnama from Sri Darbar Sahib, Sri Amritsar."
+    bbox = draw1.textbbox((0, 0), h_title, font=f_header_title)
+    draw1.text((CENTER_X - (bbox[2] - bbox[0]) / 2, 58), h_title, fill="#9e1b1b", font=f_header_title)
 
-    # Use bundled Noto Sans Gurmukhi for Gurmukhi text
-    def load_gurmukhi_font(size):
-        if os.path.exists(GURMUKHI_FONT_PATH):
-            try:
-                return ImageFont.truetype(GURMUKHI_FONT_PATH, size)
-            except Exception as e:
-                print(f"Warning: Could not load Gurmukhi font: {e}")
-        return load_font("arial.ttf", size)
+    h_date = payload.get("date_str") or "Today's Daily Hukamnama"
+    bbox = draw1.textbbox((0, 0), h_date, font=f_header_date)
+    draw1.text((CENTER_X - (bbox[2] - bbox[0]) / 2, 84), h_date, fill="#742a1a", font=f_header_date)
 
-    f_title_gu = load_gurmukhi_font(60)
-    f_text     = load_gurmukhi_font(48)
-    f_footer_gu = load_gurmukhi_font(36)
-
-    # 5. Logo (top-right)
-    logo_size = 148
-    if os.path.exists(LOGO_PATH):
-        try:
-            logo = Image.open(LOGO_PATH).convert("RGBA")
-            logo = logo.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
-            canvas.alpha_composite(logo, (CANVAS_W - logo_size - 52, 52))
-            draw = ImageDraw.Draw(canvas)
-        except Exception as e:
-            print(f"Warning: logo load failed: {e}")
-
-    # 6. Header
-    y = 70
-    # Ik Onkar
-    ik = "ੴ"
-    try:
-        bbox = draw.textbbox((0, 0), ik, font=f_title_gu)
-        iw = bbox[2] - bbox[0]
-        draw.text(((CANVAS_W - iw) / 2, y), ik, fill=COLOR_ACCENT, font=f_title_gu)
+    y = 122
+    raag_punjabi = payload.get("raag_punjabi", "").strip()
+    if raag_punjabi:
+        bbox = draw1.textbbox((0, 0), raag_punjabi, font=f_raag)
+        draw1.text((CENTER_X - (bbox[2] - bbox[0]) / 2, y), raag_punjabi, fill="#000000", font=f_raag)
         y += (bbox[3] - bbox[1]) + 14
-    except Exception:
-        y += 70
+    else:
+        y += 10
 
-    # Divider
-    draw.line([(70, y), (CANVAS_W - 70, y)], fill=COLOR_ACCENT, width=2)
-    y += 16
+    mukhwak = payload.get("mukhwak", "").strip()
+    LINE_H_MUKHWAK = 25.5
+    if mukhwak:
+        mukhwak_lines = wrap_words(draw1, mukhwak, f_mukhwak, CONTENT_W)
+        for idx, line_words in enumerate(mukhwak_lines):
+            is_last = (idx == len(mukhwak_lines) - 1)
+            draw_justified(draw1, line_words, LEFT_X, y, f_mukhwak, "#000000", CONTENT_W, is_last=is_last)
+            y += LINE_H_MUKHWAK
 
-    # Date
-    y = draw_centered(draw, date_str, y, f_date, COLOR_DARK)
-    y += 6
+    y += 18
+    punjabi_date_str = payload.get("punjabi_date_str", "").strip()
+    if punjabi_date_str:
+        bbox = draw1.textbbox((0, 0), punjabi_date_str, font=f_ang_date)
+        draw1.text((CENTER_X - (bbox[2] - bbox[0]) / 2, y), punjabi_date_str, fill="#000000", font=f_ang_date)
+        y += (bbox[3] - bbox[1]) + 20
 
-    # Punjabi title
-    y = draw_centered(draw, "ਰੋਜ਼ਾਨਾ ਹੁਕਮਨਾਮਾ", y, f_title_gu, COLOR_ACCENT)
+    viakhya = payload.get("viakhya", "").strip()
+    overflow_viakhya = []
+    LINE_H_VIAKHYA = 23.6
+    MAX_PAGE1_Y = 890
 
-    # English subtitle
-    y = draw_centered(draw, "Sri Harmandir Sahib, Sri Amritsar", y, f_title_en, COLOR_DARK)
-    y += 6
+    if viakhya:
+        viakhya_head = "ਪੰਜਾਬੀ ਵਿਆਖਿਆ:"
+        draw1.text((LEFT_X, y), viakhya_head, fill="#000000", font=f_viakhya_head)
+        bbox = draw1.textbbox((LEFT_X, y), viakhya_head, font=f_viakhya_head)
+        draw1.line([(LEFT_X, bbox[3] + 2), (bbox[2], bbox[3] + 2)], fill="#000000", width=1)
+        y += 32
 
-    # Divider
-    draw.line([(70, y), (CANVAS_W - 70, y)], fill=COLOR_ACCENT, width=2)
-    y += 26
-
-    # 7. Gurmukhi text
-    text_to_show = gurmukhi_text.strip() if gurmukhi_text else "ਸ੍ਰੀ ਦਰਬਾਰ ਸਾਹਿਬ, ਅੰਮ੍ਰਿਤਸਰ"
-    lines = text_to_show.split("\n")
-    max_y = CANVAS_H - 230
-
-    for line in lines:
-        line = line.strip()
-        if not line:
-            y += 16
-            continue
-        if y >= max_y:
-            try:
-                dots_bbox = draw.textbbox((0, 0), "...", font=f_text)
-                draw.text(((CANVAS_W - (dots_bbox[2] - dots_bbox[0])) / 2, y), "...", fill=COLOR_DARK, font=f_text)
-            except Exception:
-                pass
-            break
-
-        # Estimate chars per line (approximate)
-        try:
-            sample_bbox = draw.textbbox((0, 0), "ੴ", font=f_text)
-            char_w = max(sample_bbox[2] - sample_bbox[0], 1)
-        except Exception:
-            char_w = 30
-        max_chars = max(int((CANVAS_W - 140) / char_w), 6)
-
-        # Wrap
-        wrapped_lines = textwrap.wrap(line, width=max_chars) or [line]
-        for wl in wrapped_lines:
-            if y >= max_y:
+        viakhya_lines = wrap_words(draw1, viakhya, f_viakhya_body, CONTENT_W)
+        for idx, line_words in enumerate(viakhya_lines):
+            if y + LINE_H_VIAKHYA > MAX_PAGE1_Y:
+                overflow_viakhya = viakhya_lines[idx:]
                 break
-            try:
-                bbox = draw.textbbox((0, 0), wl, font=f_text)
-                tw = bbox[2] - bbox[0]
-                th = bbox[3] - bbox[1]
-                draw.text(((CANVAS_W - tw) / 2, y), wl, fill=COLOR_DARK, font=f_text)
-                y += th + 12
-            except Exception:
-                y += 52
-        y += 6
+            is_last = (idx == len(viakhya_lines) - 1)
+            draw_justified(draw1, line_words, LEFT_X, y, f_viakhya_body, "#111111", CONTENT_W, is_last=is_last)
+            y += LINE_H_VIAKHYA
 
-    # 8. Footer
-    fy = CANVAS_H - 175
-    draw.line([(70, fy), (CANVAS_W - 70, fy)], fill=COLOR_ACCENT, width=2)
-    fy += 18
+    out_p1 = payload.get("output_p1") or os.path.join(BASE_DIR, "public", "uploads", "test_poster_p1.jpg")
+    os.makedirs(os.path.dirname(os.path.abspath(out_p1)), exist_ok=True)
+    bg1.save(out_p1, quality=95)
+    print(f"Page 1 successfully saved: {out_p1}")
 
-    fy = draw_centered(draw, "www.dailyhukamnama.in", fy, f_footer, COLOR_ACCENT)
-    fy = draw_centered(draw, "ਰੋਜ਼ਾਨਾ ਹੁਕਮਨਾਮਾ, ਸ੍ਰੀ ਹਰਿਮੰਦਰ ਸਾਹਿਬ", fy, f_footer_gu, COLOR_DARK)
+    # -------------------------------------------------------------
+    # PAGE 2 RENDER (if English or Viakhya overflow exists)
+    # -------------------------------------------------------------
+    english = payload.get("english", "").strip()
+    out_p2 = payload.get("output_p2")
+    if not out_p2:
+        base_part, ext = os.path.splitext(out_p1)
+        if base_part.endswith("-1"):
+            out_p2 = f"{base_part[:-2]}-2{ext}"
+        else:
+            out_p2 = f"{base_part}-2{ext}"
 
-    # 9. Save
-    rgb = canvas.convert("RGB")
-    rgb.save(output_path, "JPEG", quality=92, optimize=True)
-    print(f"Poster successfully generated at {output_path}")
-    return output_path
+    if english or overflow_viakhya:
+        bg2 = Image.open(bg_file).convert("RGB").resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
+        draw2 = ImageDraw.Draw(bg2)
+        y2 = 62
+
+        if overflow_viakhya:
+            for idx, line_words in enumerate(overflow_viakhya):
+                is_last = (idx == len(overflow_viakhya) - 1)
+                draw_justified(draw2, line_words, LEFT_X, y2, f_viakhya_body, "#111111", CONTENT_W, is_last=is_last)
+                y2 += LINE_H_VIAKHYA
+            y2 += 22
+
+        eng_head = "English Translation:"
+        draw2.text((LEFT_X, y2), eng_head, fill="#000000", font=f_eng_head)
+        bbox = draw2.textbbox((LEFT_X, y2), eng_head, font=f_eng_head)
+        draw2.line([(LEFT_X, bbox[3] + 2), (bbox[2], bbox[3] + 2)], fill="#000000", width=1)
+        y2 += 30
+
+        raag_english = payload.get("raag_english", "").strip()
+        if raag_english:
+            bbox = draw2.textbbox((0, 0), raag_english, font=f_eng_raag)
+            draw2.text((CENTER_X - (bbox[2] - bbox[0]) / 2, y2), raag_english, fill="#000000", font=f_eng_raag)
+            y2 += 28
+
+        if english:
+            eng_lines = wrap_words(draw2, english, f_eng_body, CONTENT_W)
+            LINE_H_ENG = 20.0
+            for idx, line_words in enumerate(eng_lines):
+                is_last = (idx == len(eng_lines) - 1)
+                draw_justified(draw2, line_words, LEFT_X, y2, f_eng_body, "#111111", CONTENT_W, is_last=is_last)
+                y2 += LINE_H_ENG
+
+        english_date_str = payload.get("english_date_str", "").strip()
+        if english_date_str:
+            y2 += 24
+            bbox = draw2.textbbox((0, 0), english_date_str, font=f_eng_date)
+            draw2.text((CENTER_X - (bbox[2] - bbox[0]) / 2, y2), english_date_str, fill="#000000", font=f_eng_date)
+
+        os.makedirs(os.path.dirname(os.path.abspath(out_p2)), exist_ok=True)
+        bg2.save(out_p2, quality=95)
+        print(f"Page 2 successfully saved: {out_p2}")
+        return out_p1, out_p2
+
+    return out_p1, None
 
 
 if __name__ == "__main__":
-    import base64
-    date_arg     = sys.argv[1] if len(sys.argv) > 1 else None
-    out_arg      = sys.argv[2] if len(sys.argv) > 2 else "public/uploads/test_poster.jpg"
-    gurmukhi_b64 = sys.argv[3] if len(sys.argv) > 3 else ""
-    # Decode base64-encoded gurmukhi text (passed from Node.js to avoid shell quoting issues)
-    if gurmukhi_b64:
-        try:
-            gurmukhi_arg = base64.b64decode(gurmukhi_b64).decode("utf-8")
-        except Exception:
-            gurmukhi_arg = gurmukhi_b64
-    else:
-        gurmukhi_arg = ""
-    generate_poster(date_str=date_arg, output_path=out_arg, gurmukhi_text=gurmukhi_arg)
+    parser = argparse.ArgumentParser(description="Daily Hukamnama Poster Generator")
+    parser.add_argument("--json", dest="json_data", help="Base64 or raw JSON string payload")
+    parser.add_argument("--json-file", dest="json_file", help="Path to JSON file containing payload")
+    parser.add_argument("args", nargs="*", help="Positional args: date_str, output_p1, [mukhwak_b64], [viakhya_b64], [english_b64], [output_p2]")
 
+    parsed, unknown = parser.parse_known_args()
+
+    payload = {}
+    if parsed.json_file and os.path.exists(parsed.json_file):
+        with open(parsed.json_file, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+    elif parsed.json_data:
+        raw_json = parsed.json_data
+        try:
+            raw_json = base64.b64decode(raw_json).decode("utf-8")
+        except Exception:
+            pass
+        payload = json.loads(raw_json)
+    elif parsed.args:
+        date_arg = parsed.args[0] if len(parsed.args) > 0 else ""
+        out_p1   = parsed.args[1] if len(parsed.args) > 1 else "public/uploads/test_poster.jpg"
+        
+        def safe_b64_decode(val):
+            if not val:
+                return ""
+            try:
+                return base64.b64decode(val).decode("utf-8")
+            except Exception:
+                return val
+
+        mukhwak_arg = safe_b64_decode(parsed.args[2]) if len(parsed.args) > 2 else ""
+        viakhya_arg = safe_b64_decode(parsed.args[3]) if len(parsed.args) > 3 else ""
+        english_arg = safe_b64_decode(parsed.args[4]) if len(parsed.args) > 4 else ""
+        out_p2      = parsed.args[5] if len(parsed.args) > 5 else None
+
+        payload = {
+            "date_str": date_arg,
+            "output_p1": out_p1,
+            "mukhwak": mukhwak_arg,
+            "viakhya": viakhya_arg,
+            "english": english_arg,
+            "output_p2": out_p2
+        }
+
+    generate_posters(payload)
