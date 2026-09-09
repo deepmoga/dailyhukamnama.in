@@ -53,7 +53,15 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const result = await extractAndStoreHukamnama();
+    const { searchParams } = new URL(request.url);
+    const forceParam = searchParams.get('force') === 'true' || searchParams.get('force') === '1';
+    let body = {};
+    try {
+      body = await request.json();
+    } catch (e) {}
+    const isForce = forceParam || body?.force === true;
+
+    const result = await extractAndStoreHukamnama(new Date(), isForce);
     return NextResponse.json({
       success: true,
       result,

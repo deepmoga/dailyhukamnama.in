@@ -16,6 +16,8 @@ export default function PosterTemplateAdmin() {
   const [uploading, setUploading] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [syncing, setSyncing] = useState(false);
+  const [currentDate, setCurrentDate] = useState('2026-09-09');
   const [posters, setPosters] = useState({
     page1: `/uploads/hukamnama-2026-09-09-1.jpg?t=${Date.now()}`,
     page2: `/uploads/hukamnama-2026-09-09-2.jpg?t=${Date.now()}`,
@@ -25,10 +27,24 @@ export default function PosterTemplateAdmin() {
   const fetchTemplateInfo = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/template-bg');
-      const data = await res.json();
+      const [tplRes, hRes] = await Promise.all([
+        fetch('/api/admin/template-bg'),
+        fetch('/api/hukamnama').catch(() => null),
+      ]);
+      const data = await tplRes.json();
       if (data.success) {
         setTemplateInfo(data);
+      }
+      if (hRes && hRes.ok) {
+        const hData = await hRes.json();
+        const dateStr = hData?.data?.current?.hukamnama_date;
+        if (dateStr) {
+          setCurrentDate(dateStr);
+          setPosters({
+            page1: `/uploads/hukamnama-${dateStr}-1.jpg?t=${Date.now()}`,
+            page2: `/uploads/hukamnama-${dateStr}-2.jpg?t=${Date.now()}`,
+          });
+        }
       }
     } catch (err) {
       console.error('Failed to load template info:', err);
@@ -95,10 +111,10 @@ export default function PosterTemplateAdmin() {
         if (fileInputRef.current) fileInputRef.current.value = '';
         
         await fetchTemplateInfo();
-        // Update live preview cachebuster
+        const d = data.regenerated?.hukamnama_date || currentDate;
         setPosters({
-          page1: `/uploads/hukamnama-2026-09-09-1.jpg?t=${Date.now()}`,
-          page2: `/uploads/hukamnama-2026-09-09-2.jpg?t=${Date.now()}`,
+          page1: `/uploads/hukamnama-${d}-1.jpg?t=${Date.now()}`,
+          page2: `/uploads/hukamnama-${d}-2.jpg?t=${Date.now()}`,
         });
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to update background image.' });
@@ -124,9 +140,10 @@ export default function PosterTemplateAdmin() {
       const data = await res.json();
       if (data.success) {
         setMessage({ type: 'success', text: 'Today\'s posters regenerated successfully with current background!' });
+        const d = data.result?.hukamnama_date || currentDate;
         setPosters({
-          page1: `/uploads/hukamnama-2026-09-09-1.jpg?t=${Date.now()}`,
-          page2: `/uploads/hukamnama-2026-09-09-2.jpg?t=${Date.now()}`,
+          page1: `/uploads/hukamnama-${d}-1.jpg?t=${Date.now()}`,
+          page2: `/uploads/hukamnama-${d}-2.jpg?t=${Date.now()}`,
         });
       } else {
         setMessage({ type: 'error', text: data.error || 'Regeneration failed.' });
@@ -135,6 +152,33 @@ export default function PosterTemplateAdmin() {
       setMessage({ type: 'error', text: 'Regeneration error: ' + err.message });
     } finally {
       setRegenerating(false);
+    }
+  };
+
+  const handleSyncHukamnama = async () => {
+    try {
+      setSyncing(true);
+      setMessage({ type: '', text: '' });
+
+      const res = await fetch('/api/hukamnama?force=true', {
+        method: 'POST',
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Hukamnama synced and posters generated successfully!' });
+        const d = data.result?.hukamnama?.hukamnama_date || currentDate;
+        setPosters({
+          page1: `/uploads/hukamnama-${d}-1.jpg?t=${Date.now()}`,
+          page2: `/uploads/hukamnama-${d}-2.jpg?t=${Date.now()}`,
+        });
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Sync failed.' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Sync error: ' + err.message });
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -156,11 +200,21 @@ export default function PosterTemplateAdmin() {
             </p>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={handleSyncHukamnama}
+              disabled={syncing || regenerating}
+              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold border border-slate-700 transition"
+              title="Scrapes today's latest hukamnama and regenerates posters"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              <span>{syncing ? 'Syncing...' : 'Sync & Re-fetch Hukamnama'}</span>
+            </button>
             <button
               onClick={handleRegenerate}
-              disabled={regenerating}
+              disabled={regenerating || syncing}
               className="inline-flex items-center space-x-2 px-4 py-2.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-md transition"
+              title="Regenerates posters for today with current background"
             >
               <RefreshCw className={`w-4 h-4 ${regenerating ? 'animate-spin' : ''}`} />
               <span>{regenerating ? 'Generating...' : 'Regenerate Posters'}</span>
