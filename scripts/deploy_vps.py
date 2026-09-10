@@ -10,8 +10,8 @@ ssh.connect('62.84.184.96', username='root', password='gDdsK5j9EGN8yyHlg1I12r1AD
 
 commands = [
     "cp /home/demo.dailyhukamnama.in/app/public/assets/images/bg.jpg /tmp/user_bg.jpg || true",
-    "cd /home/demo.dailyhukamnama.in/app && git checkout -- assets/images/bg.jpg public/assets/images/bg.jpg public/uploads/ scripts/sync_cron.sh || git stash",
-    "cd /home/demo.dailyhukamnama.in/app && git pull origin main",
+    "cd /home/demo.dailyhukamnama.in/app && rm -f public/uploads/hukamnama-2026-09-10*.jpg",
+    "cd /home/demo.dailyhukamnama.in/app && git fetch origin main && git reset --hard origin/main",
     "cp /tmp/user_bg.jpg /home/demo.dailyhukamnama.in/app/public/assets/images/bg.jpg && cp /tmp/user_bg.jpg /home/demo.dailyhukamnama.in/app/assets/images/bg.jpg || true",
     "pip3 install --break-system-packages uharfbuzz freetype-py Pillow",
     "cd /home/demo.dailyhukamnama.in/app && npm install",
