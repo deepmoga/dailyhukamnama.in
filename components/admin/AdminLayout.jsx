@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { 
   LayoutDashboard, FileText, BookOpen, Users, 
-  ExternalLink, LogOut, Menu, X, PlusCircle, Sparkles, Image as ImageIcon
+  ExternalLink, LogOut, Menu, X, PlusCircle, Sparkles, Image as ImageIcon, Settings
 } from 'lucide-react';
 
 export default function AdminLayout({ children }) {
@@ -61,6 +61,7 @@ export default function AdminLayout({ children }) {
     { label: 'Path Pages', href: '/admin/pages?type=path', icon: BookOpen },
     { label: 'Volunteers', href: '/admin/volunteers', icon: Users },
     { label: 'Poster Template', href: '/admin/poster-template', icon: ImageIcon },
+    { label: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 
   return (

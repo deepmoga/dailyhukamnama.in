@@ -46,7 +46,7 @@ export default async function DailyHukamnamaDatePage({ params }) {
             <span>Home</span>
           </Link>
           <span className="text-slate-500">/</span>
-          <Link href="/calender" className="text-slate-300 hover:text-white">
+          <Link href="/daily-hukamnamas" className="text-slate-300 hover:text-white">
             Archives
           </Link>
           <span className="text-slate-500">/</span>

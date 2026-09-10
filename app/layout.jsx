@@ -1,4 +1,5 @@
 import './globals.css';
+import { LiveKirtanProvider } from '@/components/LiveKirtanContext';
 
 export const metadata = {
   metadataBase: new URL('https://dailyhukamnama.in'),
@@ -6,8 +7,8 @@ export const metadata = {
   description: "Read today's Daily Hukamnama (Mukhwak) from Sachkhand Sri Harmandir Sahib (Golden Temple), Amritsar with Gurmukhi text, Punjabi Viakhya, English and Hindi translations.",
   keywords: "daily hukamnama, hukamnama today, golden temple hukamnama, sri darbar sahib mukhwak, nanakshahi calendar, sikhism",
   icons: {
-    icon: '/logo.png',
-    apple: '/logo.png',
+    icon: '/api/public/favicon',
+    apple: '/api/public/favicon',
   },
   openGraph: {
     title: "Daily Hukamnama Sri Darbar Sahib Amritsar",
@@ -39,7 +40,9 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="bg-[#fdfbf7] text-slate-800 antialiased min-h-screen flex flex-col">
-        {children}
+        <LiveKirtanProvider>
+          {children}
+        </LiveKirtanProvider>
       </body>
     </html>
   );

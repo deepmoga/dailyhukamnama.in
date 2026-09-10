@@ -1,15 +1,23 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { cookies } from 'next/headers';
+import { verifyCaptcha } from '@/lib/recaptcha';
 
 const SESSION_COOKIE_NAME = 'admin_session';
 
 export async function POST(request) {
   try {
-    const { username, password } = await request.json();
+    const { username, password, captchaToken } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
+    }
+
+    // Verify Google reCAPTCHA if secret key is set
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
+    const captchaResult = await verifyCaptcha(captchaToken, ip);
+    if (!captchaResult.success) {
+      return NextResponse.json({ error: captchaResult.error }, { status: 400 });
     }
 
     const [rows] = await pool.query(

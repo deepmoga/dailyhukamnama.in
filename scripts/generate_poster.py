@@ -8,6 +8,7 @@ import os
 import sys
 import json
 import base64
+import re
 import argparse
 from PIL import Image, ImageDraw, ImageFont, ImageColor, features
 
@@ -295,57 +296,85 @@ def generate_posters(payload):
         raise FileNotFoundError("Background template bg.jpg not found in assets/images/bg.jpg or public/assets/images/bg.jpg")
 
     TARGET_W, TARGET_H = 724, 1024
-    LEFT_X = 54
-    RIGHT_X = 670
-    CONTENT_W = RIGHT_X - LEFT_X  # 616px
+    LEFT_X = 100
+    RIGHT_X = 624
+    CONTENT_W = RIGHT_X - LEFT_X  # 584px
     CENTER_X = TARGET_W / 2
+    MAX_CONTENT_Y = 880
+    TOP_Y_PAGE1 = 100
+    TOP_Y_SUBSEQUENT = 165
 
-    f_header_title = get_font("serif", 19, bold=True)
-    f_header_date  = get_font("serif", 14, bold=True)
-    f_raag         = get_font("gurmukhi_serif", 16, bold=True)
-    f_mukhwak      = get_font("gurmukhi_serif", 13.5, bold=False)
-    f_ang_date     = get_font("gurmukhi_serif", 13.5, bold=True)
-    f_viakhya_head = get_font("gurmukhi_serif", 14, bold=True)
-    f_viakhya_body = get_font("gurmukhi_serif", 13.8, bold=False)
+    # Boosted font sizes as requested for enhanced readability
+    f_header_title = get_font("serif", 17.5, bold=True)
+    f_header_date  = get_font("serif", 14.0, bold=True)
+    f_raag         = get_font("gurmukhi_serif", 17.5, bold=True)
+    f_mukhwak      = get_font("gurmukhi_serif", 15.2, bold=False)
+    f_ang_date     = get_font("gurmukhi_serif", 14.5, bold=True)
+    f_viakhya_head = get_font("gurmukhi_serif", 15.5, bold=True)
+    f_viakhya_body = get_font("gurmukhi_serif", 15.0, bold=False)
 
-    f_eng_head     = get_font("serif", 14.5, bold=True)
-    f_eng_raag     = get_font("serif", 13.5, bold=True)
-    f_eng_body     = get_font("serif", 12.8, bold=False)
-    f_eng_date     = get_font("serif", 13.5, bold=True)
+    f_eng_head     = get_font("serif", 15.5, bold=True)
+    f_eng_raag     = get_font("serif", 14.5, bold=True)
+    f_eng_body     = get_font("serif", 14.0, bold=False)
+    f_eng_date     = get_font("serif", 14.5, bold=True)
+
+    LINE_H_MUKHWAK = 27.5
+    LINE_H_VIAKHYA = 25.5
+    LINE_H_ENG     = 22.5
+
+    pages = []
+
+    def create_page():
+        bg = Image.open(bg_file).convert("RGBA").resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
+        draw = ImageDraw.Draw(bg)
+        page_info = {
+            "img": bg,
+            "draw": draw,
+            "y": TOP_Y_PAGE1 if len(pages) == 0 else TOP_Y_SUBSEQUENT
+        }
+        pages.append(page_info)
+        return page_info
+
+    curr_page = create_page()
 
     # -------------------------------------------------------------
-    # PAGE 1 RENDER
+    # SECTION 1: HEADER (Page 1 only)
     # -------------------------------------------------------------
-    bg1 = Image.open(bg_file).convert("RGBA").resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
-    draw1 = ImageDraw.Draw(bg1)
-
     h_title = "Today's Hukamnama from Sri Darbar Sahib, Sri Amritsar."
     bbox = f_header_title.get_bbox((0, 0), h_title)
-    f_header_title.draw_text(bg1, (CENTER_X - (bbox[2] - bbox[0]) / 2, 58), h_title, fill="#9e1b1b")
+    f_header_title.draw_text(curr_page["img"], (CENTER_X - (bbox[2] - bbox[0]) / 2, curr_page["y"]), h_title, fill="#9e1b1b")
+    curr_page["y"] += 26
 
     h_date = payload.get("date_str") or "Today's Daily Hukamnama"
     bbox = f_header_date.get_bbox((0, 0), h_date)
-    f_header_date.draw_text(bg1, (CENTER_X - (bbox[2] - bbox[0]) / 2, 84), h_date, fill="#742a1a")
+    f_header_date.draw_text(curr_page["img"], (CENTER_X - (bbox[2] - bbox[0]) / 2, curr_page["y"]), h_date, fill="#742a1a")
+    curr_page["y"] += 38
 
-    y = 122
     raag_punjabi = payload.get("raag_punjabi", "").strip()
     if raag_punjabi:
         bbox = f_raag.get_bbox((0, 0), raag_punjabi)
-        f_raag.draw_text(bg1, (CENTER_X - (bbox[2] - bbox[0]) / 2, y), raag_punjabi, fill="#000000")
-        y += (bbox[3] - bbox[1]) + 14
+        f_raag.draw_text(curr_page["img"], (CENTER_X - (bbox[2] - bbox[0]) / 2, curr_page["y"]), raag_punjabi, fill="#000000")
+        curr_page["y"] += (bbox[3] - bbox[1]) + 14
     else:
-        y += 10
+        curr_page["y"] += 10
 
+    # -------------------------------------------------------------
+    # SECTION 2: MUKHWAK (Gurmukhi text)
+    # -------------------------------------------------------------
     mukhwak = payload.get("mukhwak", "").strip()
-    LINE_H_MUKHWAK = 25.5
     if mukhwak:
         mukhwak_lines = f_mukhwak.wrap_words(mukhwak, CONTENT_W)
         for idx, line_words in enumerate(mukhwak_lines):
+            if curr_page["y"] + LINE_H_MUKHWAK > MAX_CONTENT_Y:
+                curr_page = create_page()
             is_last = (idx == len(mukhwak_lines) - 1)
-            f_mukhwak.draw_justified(bg1, line_words, LEFT_X, y, "#000000", CONTENT_W, is_last=is_last)
-            y += LINE_H_MUKHWAK
+            f_mukhwak.draw_justified(curr_page["img"], line_words, LEFT_X, curr_page["y"], "#000000", CONTENT_W, is_last=is_last)
+            curr_page["y"] += LINE_H_MUKHWAK
+        curr_page["y"] += 16
 
-    y += 18
+    # -------------------------------------------------------------
+    # SECTION 3: PUNJABI DATE & ANG
+    # -------------------------------------------------------------
     punjabi_date_str = payload.get("punjabi_date_str", "").strip()
     if punjabi_date_str:
         replacements = [
@@ -366,91 +395,136 @@ def generate_posters(payload):
         punjabi_date_str = "".join(num_map.get(ch, ch) for ch in punjabi_date_str)
 
         bbox = f_ang_date.get_bbox((0, 0), punjabi_date_str)
-        f_ang_date.draw_text(bg1, (CENTER_X - (bbox[2] - bbox[0]) / 2, y), punjabi_date_str, fill="#000000")
-        y += (bbox[3] - bbox[1]) + 20
+        h_ang = (bbox[3] - bbox[1]) + 18
+        if curr_page["y"] + h_ang > MAX_CONTENT_Y:
+            curr_page = create_page()
+        f_ang_date.draw_text(curr_page["img"], (CENTER_X - (bbox[2] - bbox[0]) / 2, curr_page["y"]), punjabi_date_str, fill="#000000")
+        curr_page["y"] += h_ang
 
+    # -------------------------------------------------------------
+    # SECTION 4: VIAKHYA (PUNJABI ARTH)
+    # -------------------------------------------------------------
     viakhya = payload.get("viakhya", "").strip()
-    overflow_viakhya = []
-    LINE_H_VIAKHYA = 23.6
-    MAX_PAGE1_Y = 890
-
     if viakhya:
         viakhya_head = "ਪੰਜਾਬੀ ਵਿਆਖਿਆ:"
-        f_viakhya_head.draw_text(bg1, (LEFT_X, y), viakhya_head, fill="#000000")
-        bbox = f_viakhya_head.get_bbox((LEFT_X, y), viakhya_head)
-        draw1.line([(LEFT_X, bbox[3] + 2), (bbox[2], bbox[3] + 2)], fill="#000000", width=1)
-        y += 32
+        # Keep header with at least 2 lines of content to avoid orphan heading
+        if curr_page["y"] + 32 + (2 * LINE_H_VIAKHYA) > MAX_CONTENT_Y:
+            curr_page = create_page()
+
+        f_viakhya_head.draw_text(curr_page["img"], (LEFT_X, curr_page["y"]), viakhya_head, fill="#000000")
+        bbox = f_viakhya_head.get_bbox((LEFT_X, curr_page["y"]), viakhya_head)
+        curr_page["draw"].line([(LEFT_X, bbox[3] + 2), (bbox[2], bbox[3] + 2)], fill="#000000", width=1)
+        curr_page["y"] += 30
 
         viakhya_lines = f_viakhya_body.wrap_words(viakhya, CONTENT_W)
         for idx, line_words in enumerate(viakhya_lines):
-            if y + LINE_H_VIAKHYA > MAX_PAGE1_Y:
-                overflow_viakhya = viakhya_lines[idx:]
-                break
+            if curr_page["y"] + LINE_H_VIAKHYA > MAX_CONTENT_Y:
+                curr_page = create_page()
             is_last = (idx == len(viakhya_lines) - 1)
-            f_viakhya_body.draw_justified(bg1, line_words, LEFT_X, y, "#111111", CONTENT_W, is_last=is_last)
-            y += LINE_H_VIAKHYA
-
-    out_p1 = payload.get("output_p1") or os.path.join(BASE_DIR, "public", "uploads", "test_poster_p1.jpg")
-    os.makedirs(os.path.dirname(os.path.abspath(out_p1)), exist_ok=True)
-    bg1.convert("RGB").save(out_p1, quality=95)
-    print(f"Page 1 successfully saved: {out_p1}")
+            f_viakhya_body.draw_justified(curr_page["img"], line_words, LEFT_X, curr_page["y"], "#111111", CONTENT_W, is_last=is_last)
+            curr_page["y"] += LINE_H_VIAKHYA
+        curr_page["y"] += 18
 
     # -------------------------------------------------------------
-    # PAGE 2 RENDER (if English or Viakhya overflow exists)
+    # SECTION 5: ENGLISH TRANSLATION (Directly below Punjabi wording)
     # -------------------------------------------------------------
     english = payload.get("english", "").strip()
-    out_p2 = payload.get("output_p2")
-    if not out_p2:
-        base_part, ext = os.path.splitext(out_p1)
-        if base_part.endswith("-1"):
-            out_p2 = f"{base_part[:-2]}-2{ext}"
-        else:
-            out_p2 = f"{base_part}-2{ext}"
-
-    if english or overflow_viakhya:
-        bg2 = Image.open(bg_file).convert("RGBA").resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
-        draw2 = ImageDraw.Draw(bg2)
-        y2 = 62
-
-        if overflow_viakhya:
-            for idx, line_words in enumerate(overflow_viakhya):
-                is_last = (idx == len(overflow_viakhya) - 1)
-                f_viakhya_body.draw_justified(bg2, line_words, LEFT_X, y2, "#111111", CONTENT_W, is_last=is_last)
-                y2 += LINE_H_VIAKHYA
-            y2 += 22
+    if english:
+        needed_for_start = 30 + (2 * LINE_H_ENG)
+        if payload.get("raag_english", "").strip():
+            needed_for_start += 26
+        if curr_page["y"] + needed_for_start > MAX_CONTENT_Y:
+            curr_page = create_page()
 
         eng_head = "English Translation:"
-        f_eng_head.draw_text(bg2, (LEFT_X, y2), eng_head, fill="#000000")
-        bbox = f_eng_head.get_bbox((LEFT_X, y2), eng_head)
-        draw2.line([(LEFT_X, bbox[3] + 2), (bbox[2], bbox[3] + 2)], fill="#000000", width=1)
-        y2 += 30
+        f_eng_head.draw_text(curr_page["img"], (LEFT_X, curr_page["y"]), eng_head, fill="#000000")
+        bbox = f_eng_head.get_bbox((LEFT_X, curr_page["y"]), eng_head)
+        curr_page["draw"].line([(LEFT_X, bbox[3] + 2), (bbox[2], bbox[3] + 2)], fill="#000000", width=1)
+        curr_page["y"] += 28
 
         raag_english = payload.get("raag_english", "").strip()
         if raag_english:
+            if curr_page["y"] + 24 > MAX_CONTENT_Y:
+                curr_page = create_page()
             bbox = f_eng_raag.get_bbox((0, 0), raag_english)
-            f_eng_raag.draw_text(bg2, (CENTER_X - (bbox[2] - bbox[0]) / 2, y2), raag_english, fill="#000000")
-            y2 += 28
+            f_eng_raag.draw_text(curr_page["img"], (CENTER_X - (bbox[2] - bbox[0]) / 2, curr_page["y"]), raag_english, fill="#000000")
+            curr_page["y"] += 24
 
-        if english:
-            eng_lines = f_eng_body.wrap_words(english, CONTENT_W)
-            LINE_H_ENG = 20.0
-            for idx, line_words in enumerate(eng_lines):
-                is_last = (idx == len(eng_lines) - 1)
-                f_eng_body.draw_justified(bg2, line_words, LEFT_X, y2, "#111111", CONTENT_W, is_last=is_last)
-                y2 += LINE_H_ENG
+        eng_lines = f_eng_body.wrap_words(english, CONTENT_W)
+        for idx, line_words in enumerate(eng_lines):
+            if curr_page["y"] + LINE_H_ENG > MAX_CONTENT_Y:
+                curr_page = create_page()
+            is_last = (idx == len(eng_lines) - 1)
+            f_eng_body.draw_justified(curr_page["img"], line_words, LEFT_X, curr_page["y"], "#111111", CONTENT_W, is_last=is_last)
+            curr_page["y"] += LINE_H_ENG
 
         english_date_str = payload.get("english_date_str", "").strip()
         if english_date_str:
-            y2 += 24
+            if curr_page["y"] + 26 > MAX_CONTENT_Y:
+                curr_page = create_page()
+            curr_page["y"] += 14
             bbox = f_eng_date.get_bbox((0, 0), english_date_str)
-            f_eng_date.draw_text(bg2, (CENTER_X - (bbox[2] - bbox[0]) / 2, y2), english_date_str, fill="#000000")
+            f_eng_date.draw_text(curr_page["img"], (CENTER_X - (bbox[2] - bbox[0]) / 2, curr_page["y"]), english_date_str, fill="#000000")
+            curr_page["y"] += 24
 
-        os.makedirs(os.path.dirname(os.path.abspath(out_p2)), exist_ok=True)
-        bg2.convert("RGB").save(out_p2, quality=95)
-        print(f"Page 2 successfully saved: {out_p2}")
-        return out_p1, out_p2
+    # -------------------------------------------------------------
+    # SAVE GENERATED PAGES
+    # -------------------------------------------------------------
+    out_p1 = payload.get("output_p1") or os.path.join(BASE_DIR, "public", "uploads", "test_poster_p1.jpg")
+    out_dir = os.path.dirname(os.path.abspath(out_p1))
+    os.makedirs(out_dir, exist_ok=True)
 
-    return out_p1, None
+    base_name = os.path.basename(out_p1)
+    file_stem, ext = os.path.splitext(base_name)
+    stem = re.sub(r'[-_](?:p\d+|\d+)$', '', file_stem)
+
+    saved_filepaths = []
+    for i, p_info in enumerate(pages):
+        page_num = i + 1
+        page_filename = f"{stem}-{page_num}{ext}"
+        page_filepath = os.path.join(out_dir, page_filename)
+        p_info["img"].convert("RGB").save(page_filepath, quality=95)
+        saved_filepaths.append(page_filepath)
+        print(f"Page {page_num} successfully saved: {page_filepath}")
+
+    # Backward compatibility: save Page 1 to root stem (e.g. hukamnama-YYYY-MM-DD.jpg)
+    legacy_file = os.path.join(out_dir, f"{stem}{ext}")
+    if saved_filepaths and os.path.abspath(legacy_file) != os.path.abspath(saved_filepaths[0]):
+        pages[0]["img"].convert("RGB").save(legacy_file, quality=95)
+
+    # Clean up stale pages from previous runs if page count reduced
+    for stale_idx in range(len(pages) + 1, 15):
+        stale_file = os.path.join(out_dir, f"{stem}-{stale_idx}{ext}")
+        if os.path.exists(stale_file):
+            try:
+                os.remove(stale_file)
+                print(f"Removed stale extra page: {stale_file}")
+            except Exception:
+                pass
+
+    # Build web relative paths
+    public_dir = os.path.join(BASE_DIR, "public")
+    relative_pages = []
+    for fp in saved_filepaths:
+        try:
+            rel = os.path.relpath(fp, public_dir).replace("\\", "/")
+            if not rel.startswith("/"):
+                rel = "/" + rel
+            relative_pages.append(rel)
+        except Exception:
+            relative_pages.append(fp)
+
+    result_data = {
+        "success": True,
+        "count": len(pages),
+        "pages": relative_pages,
+        "files": saved_filepaths
+    }
+    print(f"GENERATED_PAGES_JSON: {json.dumps(result_data)}")
+
+    p1_res = saved_filepaths[0] if len(saved_filepaths) > 0 else None
+    p2_res = saved_filepaths[1] if len(saved_filepaths) > 1 else None
+    return p1_res, p2_res
 
 
 if __name__ == "__main__":

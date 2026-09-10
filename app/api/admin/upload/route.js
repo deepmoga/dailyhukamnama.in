@@ -14,20 +14,25 @@ export async function POST(request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Ensure uploads directory exists
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    await fs.mkdir(uploadsDir, { recursive: true });
+    // Get current year and month for subfolder organization (e.g. 2026/09)
+    const now = new Date();
+    const yearStr = String(now.getFullYear());
+    const monthStr = String(now.getMonth() + 1).padStart(2, '0');
+
+    // Ensure uploads/YYYY/MM directory exists
+    const datedUploadsDir = path.join(process.cwd(), 'public', 'uploads', yearStr, monthStr);
+    await fs.mkdir(datedUploadsDir, { recursive: true });
 
     // Clean filename
     const originalName = file.name || 'image.jpg';
     const ext = path.extname(originalName) || '.jpg';
     const baseName = path.basename(originalName, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
     const filename = `${Date.now()}_${baseName}${ext}`;
-    const filePath = path.join(uploadsDir, filename);
+    const filePath = path.join(datedUploadsDir, filename);
 
     await fs.writeFile(filePath, buffer);
 
-    const publicUrl = `/uploads/${filename}`;
+    const publicUrl = `/uploads/${yearStr}/${monthStr}/${filename}`;
     return NextResponse.json({
       success: true,
       url: publicUrl,

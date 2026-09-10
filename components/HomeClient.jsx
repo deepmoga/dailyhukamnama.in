@@ -6,9 +6,11 @@ import Slider from '@/components/Slider';
 import HukamnamaViewer from '@/components/HukamnamaViewer';
 import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/Footer';
-import { Sparkles, RefreshCw } from 'lucide-react';
+import { Sparkles, Radio, Volume2, Loader2 } from 'lucide-react';
+import { useLiveKirtan } from '@/components/LiveKirtanContext';
 
 export default function HomeClient({ initialData }) {
+  const { isPlaying, isBuffering, togglePlay } = useLiveKirtan();
   const [currentHukamnama, setCurrentHukamnama] = useState(initialData?.current || null);
   const [last5Hukamnamas, setLast5Hukamnamas] = useState(initialData?.last5 || []);
   const [monthDates, setMonthDates] = useState(initialData?.monthDates || []);
@@ -107,18 +109,29 @@ export default function HomeClient({ initialData }) {
 
           <div className="flex items-center space-x-3">
             <button
-              onClick={handleSyncToday}
-              disabled={syncing}
-              className="inline-flex items-center space-x-1.5 text-xs font-semibold text-gold-800 bg-white hover:bg-gold-50 px-3.5 py-1.5 rounded-full border border-gold-300 shadow-sm transition"
+              type="button"
+              onClick={togglePlay}
+              className={`inline-flex items-center space-x-2 text-xs sm:text-sm font-semibold px-4 py-2 rounded-full border shadow-sm transition-all transform active:scale-95 cursor-pointer ${
+                isPlaying
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-emerald-600/30'
+                  : 'bg-red-600 hover:bg-red-700 text-white border-red-500 shadow-sm animate-pulse'
+              }`}
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-gold-600 ${syncing ? 'animate-spin' : ''}`} />
-              <span>{syncing ? 'Checking...' : 'Daily Sync (Once / Day)'}</span>
-            </button>
-            {syncMessage && (
-              <span className="text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full border border-green-200">
-                {syncMessage}
+              {isBuffering ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+              ) : isPlaying ? (
+                <Volume2 className="w-3.5 h-3.5 text-white animate-pulse" />
+              ) : (
+                <Radio className="w-3.5 h-3.5 text-white" />
+              )}
+              <span>
+                {isBuffering
+                  ? 'Connecting Live...'
+                  : isPlaying
+                  ? 'Pause Live Kirtan (ਸ੍ਰੀ ਹਰਿਮੰਦਰ ਸਾਹਿਬ)'
+                  : 'Play Live Kirtan from Sri Harmandir Sahib'}
               </span>
-            )}
+            </button>
           </div>
         </div>
       </section>

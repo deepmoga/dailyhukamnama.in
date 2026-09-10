@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import GoogleRecaptcha from '@/components/GoogleRecaptcha';
 import { Lock, User, Key, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
 
 export default function AdminLoginPage() {
@@ -11,6 +12,24 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [recaptchaSiteKey, setRecaptchaSiteKey] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const recaptchaRef = useRef(null);
+
+  useEffect(() => {
+    async function loadPublicSettings() {
+      try {
+        const res = await fetch('/api/public/settings');
+        const data = await res.json();
+        if (data.settings?.recaptcha_site_key) {
+          setRecaptchaSiteKey(data.settings.recaptcha_site_key);
+        }
+      } catch (err) {
+        console.warn('Could not load public settings:', err);
+      }
+    }
+    loadPublicSettings();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,7 +40,7 @@ export default function AdminLoginPage() {
       const res = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, captchaToken }),
       });
 
       const data = await res.json();
@@ -32,6 +51,9 @@ export default function AdminLoginPage() {
       router.push('/admin');
     } catch (err) {
       setError(err.message);
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+      }
     } finally {
       setLoading(false);
     }
@@ -107,6 +129,17 @@ export default function AdminLoginPage() {
                 />
               </div>
             </div>
+
+            {recaptchaSiteKey && (
+              <div className="flex justify-center">
+                <GoogleRecaptcha
+                  ref={recaptchaRef}
+                  siteKey={recaptchaSiteKey}
+                  onVerify={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken('')}
+                />
+              </div>
+            )}
 
             <div>
               <button

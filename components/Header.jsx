@@ -10,17 +10,48 @@ import {
   ChevronDown, 
   Radio, 
   Calendar as CalendarIcon,
-  Sparkles
+  Sparkles,
+  Volume2,
+  Pause,
+  Play,
+  Loader2
 } from 'lucide-react';
+import { useLiveKirtan } from '@/components/LiveKirtanContext';
 
 export default function Header() {
   const pathname = usePathname() || '/';
+  const { isPlaying, isBuffering, togglePlay } = useLiveKirtan();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [sikhGurusOpen, setSikhGurusOpen] = useState(false);
   const [pathOpen, setPathOpen] = useState(false);
   const [currentDateStr, setCurrentDateStr] = useState('');
   const [dbPaths, setDbPaths] = useState([]);
   const [dbGurus, setDbGurus] = useState([]);
+  const [siteLogo, setSiteLogo] = useState('/logo.png');
+
+  const aboutLinks = [
+    {
+      title: 'About Daily Hukamnama',
+      subtitle: 'Sri Harmandir Sahib Amritsar',
+      href: '/about-hukam',
+    },
+    {
+      title: 'Sachkhand Sri Harmandir Sahib',
+      subtitle: 'History & Spiritual Significance',
+      href: '/sri-harimandir-sahib',
+    },
+    {
+      title: 'Sri Guru Granth Sahib Ji',
+      subtitle: 'The Eternal Living Guru of the Sikhs',
+      href: '/sri-guru-granth-sahib',
+    },
+  ];
+
+  const isAboutActive = 
+    pathname === '/about-hukam' || 
+    pathname === '/sri-harimandir-sahib' || 
+    pathname === '/sri-guru-granth-sahib';
 
   useEffect(() => {
     const today = new Date();
@@ -52,6 +83,16 @@ export default function Header() {
         }
       } catch (err) {
         // fallback
+      }
+
+      try {
+        const sRes = await fetch('/api/public/settings');
+        const sData = await sRes.json();
+        if (sData.settings?.site_logo) {
+          setSiteLogo(sData.settings.site_logo);
+        }
+      } catch (err) {
+        // fallback to default
       }
     }
     loadNavigation();
@@ -114,10 +155,31 @@ export default function Header() {
               <CalendarIcon className="w-3.5 h-3.5 mr-1.5 text-gold-400" />
               {currentDateStr || 'Today'}
             </span>
-            <div className="inline-flex items-center space-x-1.5 bg-red-600/80 text-white px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-wide animate-pulse">
-              <Radio className="w-3 h-3" />
-              <span>LIVE KIRTAN SRI HARIMANDIR SAHIB</span>
-            </div>
+            <button
+              type="button"
+              onClick={togglePlay}
+              title={isPlaying ? "Click to Pause Live Kirtan" : "Click to Play Live Kirtan Sri Harmandir Sahib"}
+              className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-semibold tracking-wide transition-all transform active:scale-95 cursor-pointer shadow-xs ${
+                isPlaying
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
+              }`}
+            >
+              {isBuffering ? (
+                <Loader2 className="w-3 h-3 animate-spin text-white" />
+              ) : isPlaying ? (
+                <Volume2 className="w-3.5 h-3.5 text-white animate-pulse" />
+              ) : (
+                <Radio className="w-3 h-3" />
+              )}
+              <span>
+                {isBuffering
+                  ? 'CONNECTING LIVE...'
+                  : isPlaying
+                  ? 'PLAYING LIVE KIRTAN (PAUSE)'
+                  : 'LIVE KIRTAN SRI HARIMANDIR SAHIB'}
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -129,12 +191,10 @@ export default function Header() {
             {/* Logo & Site Title */}
             <Link href="/" className="flex items-center space-x-3.5 sm:space-x-4 group">
               <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 transition-transform group-hover:scale-105">
-                <Image 
-                  src="/logo.png" 
+                <img 
+                  src={siteLogo || "/logo.png"} 
                   alt="Daily Hukamnama Logo" 
-                  fill 
-                  className="object-contain"
-                  priority
+                  className="w-full h-full object-contain"
                 />
               </div>
               <div className="flex flex-col">
@@ -183,7 +243,7 @@ export default function Header() {
       {/* 3. DEDICATED MENU BAR (New row below logo) */}
       <div className="hidden lg:block bg-gradient-to-b from-amber-50/40 via-white to-amber-50/20 border-t border-b border-gold-200/90 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex items-center justify-between h-12">
+          <nav className="flex items-center justify-start h-12">
             <div className="flex items-center space-x-1 xl:space-x-2">
               <Link 
                 href="/" 
@@ -197,26 +257,83 @@ export default function Header() {
               </Link>
 
               <Link 
-                href="/about-hukam" 
+                href="/daily-hukamnamas" 
                 className={`px-3.5 py-1.5 text-sm font-medium rounded-md transition-all ${
-                  pathname === '/about-hukam' 
+                  pathname === '/daily-hukamnamas' 
                     ? 'text-gold-700 font-bold bg-gold-100/70 border-b-2 border-gold-600' 
                     : 'text-slate-700 hover:text-gold-600 hover:bg-gold-50/70'
                 }`}
               >
-                About Hukamnama
+                Daily Hukamnama
               </Link>
 
               <Link 
                 href="/calender" 
                 className={`px-3.5 py-1.5 text-sm font-medium rounded-md transition-all ${
-                  pathname === '/calender' 
+                  pathname === '/calender'
                     ? 'text-gold-700 font-bold bg-gold-100/70 border-b-2 border-gold-600' 
                     : 'text-slate-700 hover:text-gold-600 hover:bg-gold-50/70'
                 }`}
               >
                 Calendar
               </Link>
+
+              <Link 
+                href="/convert" 
+                className={`px-3.5 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  pathname === '/convert'
+                    ? 'text-gold-700 font-bold bg-gold-100/70 border-b-2 border-gold-600' 
+                    : 'text-slate-700 hover:text-gold-600 hover:bg-gold-50/70'
+                }`}
+              >
+                Date Converter
+              </Link>
+
+              {/* About Us Dropdown */}
+              <div 
+                className="relative"
+                onMouseEnter={() => setAboutOpen(true)}
+                onMouseLeave={() => setAboutOpen(false)}
+              >
+                <Link
+                  href="/about-hukam"
+                  className={`px-3.5 py-1.5 text-sm font-medium rounded-md flex items-center space-x-1 transition-all ${
+                    isAboutActive 
+                      ? 'text-gold-700 font-bold bg-gold-100/70 border-b-2 border-gold-600' 
+                      : 'text-slate-700 hover:text-gold-600 hover:bg-gold-50/70'
+                  }`}
+                >
+                  <span>About Us</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${aboutOpen ? 'rotate-180 text-gold-600' : ''}`} />
+                </Link>
+
+                {aboutOpen && (
+                  <div className="absolute left-0 top-full pt-1 w-72 z-50">
+                    <div className="bg-white rounded-xl shadow-xl border border-gold-200 py-2 animate-fadeIn">
+                      <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-gold-700 border-b border-gold-100 flex items-center justify-between">
+                        <span>About Sacred Institutions</span>
+                      </div>
+                      <div className="py-1">
+                        {aboutLinks.map((item, index) => (
+                          <Link 
+                            key={index} 
+                            href={item.href}
+                            onClick={() => setAboutOpen(false)}
+                            className="block px-4 py-2 text-xs hover:bg-gold-50 transition-colors group/item"
+                          >
+                            <div className={`font-medium group-hover/item:text-gold-600 ${pathname === item.href ? 'text-gold-700 font-bold' : 'text-slate-800'}`}>
+                              {item.title}
+                            </div>
+                            <div className="text-[11px] text-slate-400">
+                              {item.subtitle}
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Sikh Gurus Dropdown */}
               <div 
@@ -332,13 +449,6 @@ export default function Header() {
                 Contact Us
               </Link>
             </div>
-
-            {/* Right side spiritual blessing quote in menu row */}
-            <div className="hidden xl:flex items-center space-x-2 text-xs text-gold-800 font-medium">
-              <span className="bg-white/80 border border-gold-300/70 px-3 py-1 rounded-full text-[11px] shadow-2xs font-gurmukhi">
-                ਧੁਰ ਕੀ ਬਾਣੀ ਆਈ ॥ ਤਿਨਿ ਸਗਲੀ ਚਿੰਤ ਮਿਟਾਈ ॥
-              </span>
-            </div>
           </nav>
         </div>
       </div>
@@ -356,13 +466,13 @@ export default function Header() {
             Home
           </Link>
           <Link 
-            href="/about-hukam" 
+            href="/daily-hukamnamas" 
             onClick={() => setMobileMenuOpen(false)}
             className={`block px-3 py-2 text-base font-medium rounded-lg ${
-              pathname === '/about-hukam' ? 'text-gold-700 font-bold bg-gold-100/60' : 'text-slate-700 hover:text-gold-600 hover:bg-gold-50'
+              pathname === '/daily-hukamnamas' ? 'text-gold-700 font-bold bg-gold-100/60' : 'text-slate-700 hover:text-gold-600 hover:bg-gold-50'
             }`}
           >
-            About Hukamnama
+            Daily Hukamnama
           </Link>
           <Link 
             href="/calender" 
@@ -373,6 +483,41 @@ export default function Header() {
           >
             Calendar
           </Link>
+          <Link 
+            href="/convert" 
+            onClick={() => setMobileMenuOpen(false)}
+            className={`block px-3 py-2 text-base font-medium rounded-lg ${
+              pathname === '/convert' ? 'text-gold-700 font-bold bg-gold-100/60' : 'text-slate-700 hover:text-gold-600 hover:bg-gold-50'
+            }`}
+          >
+            Date Converter
+          </Link>
+          {/* Mobile About Us Collapsible */}
+          <div>
+            <button
+              onClick={() => setAboutOpen(!aboutOpen)}
+              className="w-full flex items-center justify-between px-3 py-2 text-base font-medium text-slate-700"
+            >
+              <span className={isAboutActive ? 'text-gold-700 font-bold' : ''}>About Us</span>
+              <ChevronDown className={`w-5 h-5 transition-transform ${aboutOpen ? 'rotate-180 text-gold-600' : ''}`} />
+            </button>
+            {aboutOpen && (
+              <div className="pl-4 pr-2 space-y-1 py-1">
+                {aboutLinks.map((item, index) => (
+                  <Link 
+                    key={index} 
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block px-3 py-1.5 text-xs rounded-md ${
+                      pathname === item.href ? 'text-gold-700 font-bold bg-gold-50' : 'text-slate-600 hover:text-gold-600'
+                    }`}
+                  >
+                    {item.title}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Mobile Sikh Gurus Collapsible */}
           <div className="border-t border-slate-100 pt-2">

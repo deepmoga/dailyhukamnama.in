@@ -145,7 +145,7 @@ export default async function DynamicSlugPage({ params }) {
 
           {/* Formatted Rich Text Content Render */}
           <div 
-            className="prose prose-slate max-w-none 
+            className="rich-text-content prose prose-slate max-w-none 
               prose-headings:font-serif-heading prose-headings:text-slate-900 
               prose-h2:text-2xl prose-h2:border-b prose-h2:border-gold-200 prose-h2:pb-2 
               prose-h3:text-xl 

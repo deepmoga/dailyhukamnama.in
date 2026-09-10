@@ -18,6 +18,8 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 
+import { useLiveKirtan } from '@/components/LiveKirtanContext';
+
 export default function Sidebar({ 
   last5Hukamnamas = [], 
   monthDates = [], 
@@ -25,39 +27,12 @@ export default function Sidebar({
   onSelectDate,
   onMonthChange
 }) {
-  const [isPlayingLive, setIsPlayingLive] = useState(false);
-  const [audioElement, setAudioElement] = useState(null);
+  const { isPlaying: isPlayingLive, togglePlay: toggleLiveKirtan, isBuffering } = useLiveKirtan();
 
   // Calendar navigation state
   const currentDate = new Date();
   const [currentYear, setCurrentYear] = useState(currentDate.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(currentDate.getMonth()); // 0-indexed
-
-  // Toggle Live Kirtan Audio
-  const toggleLiveKirtan = () => {
-    const liveStreamUrl = 'https://live.sgpc.net:8444/;'; // SGPC Live Kirtan Audio Stream
-
-    if (isPlayingLive && audioElement) {
-      audioElement.pause();
-      setIsPlayingLive(false);
-    } else {
-      let audio = audioElement;
-      if (!audio) {
-        audio = new Audio(liveStreamUrl);
-        setAudioElement(audio);
-        audio.onerror = () => {
-          // Fallback stream if SGPC primary is down
-          audio.src = 'https://stream.zeno.fm/f3wvbbqmdg8uv';
-          audio.play().catch(e => console.log('Audio playback error', e));
-        };
-      }
-      audio.play().then(() => {
-        setIsPlayingLive(true);
-      }).catch((e) => {
-        console.error('Audio play error:', e);
-      });
-    }
-  };
 
   // Calendar calculations
   const monthNames = [
@@ -372,6 +347,58 @@ export default function Sidebar({
           <Download className="w-4 h-4" />
           <span>Get on Google Play</span>
           <ExternalLink className="w-3 h-3 text-slate-400" />
+        </a>
+      </div>
+
+      {/* 5. Official Facebook Page Card */}
+      <div className="bg-white rounded-2xl p-5 border border-blue-100 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-lg bg-[#1877F2] text-white flex items-center justify-center shadow-xs">
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-bold text-xs text-slate-900 leading-tight">Facebook Page</h4>
+              <p className="text-[11px] text-slate-500">dailyhukamnama.in</p>
+            </div>
+          </div>
+          <a
+            href="https://www.facebook.com/dailyhukamnama.in/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center space-x-0.5"
+          >
+            <span>Follow</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 w-full">
+          <iframe
+            src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Fdailyhukamnama.in&tabs=timeline&width=340&height=520&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true"
+            width="100%"
+            height="520"
+            style={{ border: 'none', overflow: 'hidden' }}
+            scrolling="no"
+            frameBorder="0"
+            allowFullScreen={true}
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            title="Daily Hukamnama Facebook Page Sidebar"
+          ></iframe>
+        </div>
+
+        <a
+          href="https://www.facebook.com/dailyhukamnama.in/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center space-x-2 w-full bg-[#1877F2] hover:bg-[#166fe5] text-white text-xs font-semibold py-2.5 rounded-xl shadow-xs transition"
+        >
+          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+          </svg>
+          <span>Join us on Facebook</span>
         </a>
       </div>
     </aside>

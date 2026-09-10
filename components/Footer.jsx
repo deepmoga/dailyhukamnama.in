@@ -1,8 +1,27 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, Radio, ExternalLink } from 'lucide-react';
 
 export default function Footer() {
+  const [footerLogo, setFooterLogo] = useState('/logo.png');
+
+  useEffect(() => {
+    async function loadFooterLogo() {
+      try {
+        const res = await fetch('/api/public/settings');
+        const data = await res.json();
+        if (data.settings?.footer_logo) {
+          setFooterLogo(data.settings.footer_logo);
+        }
+      } catch (e) {
+        // fallback
+      }
+    }
+    loadFooterLogo();
+  }, []);
   const nitnemList = [
     { name: 'Japji Sahib', href: '/path/japji-sahib' },
     { name: 'Jaap Sahib', href: '/path/jaap-sahib' },
@@ -35,12 +54,11 @@ export default function Footer() {
           {/* Col 1: About & Logo */}
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
-              <div className="relative w-12 h-12 flex-shrink-0 bg-white rounded-full p-1">
-                <Image
-                  src="/logo.png"
+              <div className="relative w-12 h-12 flex-shrink-0 bg-white rounded-full p-1 overflow-hidden flex items-center justify-center">
+                <img
+                  src={footerLogo || "/logo.png"}
                   alt="Daily Hukamnama Logo"
-                  fill
-                  className="object-contain"
+                  className="w-full h-full object-contain"
                 />
               </div>
               <div>
@@ -59,6 +77,35 @@ export default function Footer() {
               <p className="font-gurmukhi text-sm text-gold-300">
                 ਵਾਹਿਗੁਰੂ ਜੀ ਕਾ ਖਾਲਸਾ ॥ ਵਾਹਿਗੁਰੂ ਜੀ ਕੀ ਫਤਹਿ ॥
               </p>
+            </div>
+
+            {/* Facebook Page Widget & Link */}
+            <div className="pt-2 space-y-2.5">
+              <a
+                href="https://www.facebook.com/dailyhukamnama.in/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-2 bg-[#1877F2] hover:bg-[#166fe5] text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-sm transition-all hover:scale-102"
+              >
+                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                <span>Follow on Facebook</span>
+              </a>
+
+              <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 max-w-[280px]">
+                <iframe
+                  src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Fdailyhukamnama.in&tabs=timeline&width=280&height=180&small_header=true&adapt_container_width=true&hide_cover=false&show_facepile=true"
+                  width="100%"
+                  height="180"
+                  style={{ border: 'none', overflow: 'hidden' }}
+                  scrolling="no"
+                  frameBorder="0"
+                  allowFullScreen={true}
+                  allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                  title="Daily Hukamnama Facebook Page"
+                ></iframe>
+              </div>
             </div>
           </div>
 
@@ -127,9 +174,33 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/sri-harimandir-sahib" className="hover:text-gold-400 transition flex items-center space-x-1">
+                  <span className="text-gold-500">›</span>
+                  <span>Sachkhand Sri Harmandir Sahib</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/sri-guru-granth-sahib" className="hover:text-gold-400 transition flex items-center space-x-1">
+                  <span className="text-gold-500">›</span>
+                  <span>Sri Guru Granth Sahib Ji</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/daily-hukamnamas" className="hover:text-gold-400 transition flex items-center space-x-1">
+                  <span className="text-gold-500">›</span>
+                  <span>Daily Hukamnama Sahib</span>
+                </Link>
+              </li>
+              <li>
                 <Link href="/calender" className="hover:text-gold-400 transition flex items-center space-x-1">
                   <span className="text-gold-500">›</span>
-                  <span>Nanakshahi Calendar & Archives</span>
+                  <span>Nanakshahi Calendar</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/convert" className="hover:text-gold-400 transition flex items-center space-x-1">
+                  <span className="text-gold-500">›</span>
+                  <span>Date Converter</span>
                 </Link>
               </li>
               <li>
@@ -145,6 +216,17 @@ export default function Footer() {
                 </Link>
               </li>
               <li className="border-t border-slate-800 pt-2">
+                <a
+                  href="https://www.facebook.com/dailyhukamnama.in/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-gold-400 transition flex items-center space-x-1 text-slate-300 font-medium"
+                >
+                  <span className="text-gold-500">›</span>
+                  <span>Facebook: /dailyhukamnama.in</span>
+                </a>
+              </li>
+              <li>
                 <a
                   href="https://sgpc.net"
                   target="_blank"
@@ -181,10 +263,23 @@ export default function Footer() {
           <p>
             © {new Date().getFullYear()} <span className="text-gold-400 font-semibold">dailyhukamnama.in</span>. All rights reserved.
           </p>
-          <p className="flex items-center space-x-1">
-            <span>Serving Gurmat & Sangat with</span>
-            <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 inline" />
-          </p>
+          <div className="flex items-center space-x-4">
+            <a
+              href="https://www.facebook.com/dailyhukamnama.in/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-[#1877F2] transition-colors flex items-center space-x-1 text-xs"
+            >
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+              <span>Facebook Page</span>
+            </a>
+            <p className="flex items-center space-x-1">
+              <span>Serving Gurmat & Sangat with</span>
+              <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 inline" />
+            </p>
+          </div>
         </div>
       </div>
     </footer>

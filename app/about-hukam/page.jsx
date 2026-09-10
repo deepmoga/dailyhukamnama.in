@@ -62,7 +62,7 @@ export default async function AboutHukamPage() {
         {/* Dynamic Admin Body if provided */}
         {dbPage?.content && (
           <div 
-            className="bg-white rounded-2xl p-6 sm:p-10 shadow-sm border border-gold-200/80 prose prose-slate max-w-none prose-headings:font-serif-heading prose-headings:text-slate-900 prose-img:rounded-xl prose-img:shadow"
+            className="bg-white rounded-2xl p-6 sm:p-10 shadow-sm border border-gold-200/80 rich-text-content prose prose-slate max-w-none prose-headings:font-serif-heading prose-headings:text-slate-900 prose-img:rounded-xl prose-img:shadow"
             dangerouslySetInnerHTML={{ __html: dbPage.content }}
           />
         )}

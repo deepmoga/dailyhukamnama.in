@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
+import GoogleRecaptcha from '@/components/GoogleRecaptcha';
 import { 
   Heart, Users, Search, ChevronLeft, ChevronRight, 
-  ArrowUpDown, Loader2, Send, CheckCircle2, Sparkles
+  ArrowUpDown, Loader2, Send, CheckCircle2, Sparkles, AlertCircle
 } from 'lucide-react';
 
 export default function VolunteersPage() {
@@ -28,10 +29,28 @@ export default function VolunteersPage() {
     message: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [recaptchaSiteKey, setRecaptchaSiteKey] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const recaptchaRef = useRef(null);
 
   useEffect(() => {
     fetchVolunteers();
+    fetchPublicSettings();
   }, []);
+
+  async function fetchPublicSettings() {
+    try {
+      const res = await fetch('/api/public/settings');
+      const data = await res.json();
+      if (data.settings?.recaptcha_site_key) {
+        setRecaptchaSiteKey(data.settings.recaptcha_site_key);
+      }
+    } catch (err) {
+      console.warn('Could not load public settings:', err);
+    }
+  }
 
   async function fetchVolunteers() {
     setLoading(true);
@@ -80,13 +99,40 @@ export default function VolunteersPage() {
   const startIndex = (currentPage - 1) * entriesPerPage;
   const displayedVolunteers = sorted.slice(startIndex, startIndex + entriesPerPage);
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
+    setErrorMessage('');
+    setSubmitting(true);
+
+    try {
+      const res = await fetch('/api/public/volunteers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          captchaToken,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to submit seva application.');
+      }
+
+      setSubmitted(true);
       setFormData({ name: '', email: '', phone: '', city: '', sevaArea: 'Website / Software Seva', message: '' });
-    }, 5000);
+      setCaptchaToken('');
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+      }
+    } catch (err) {
+      setErrorMessage(err.message);
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -365,13 +411,36 @@ export default function VolunteersPage() {
                   />
                 </div>
 
+                {errorMessage && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center space-x-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
+
+                {recaptchaSiteKey && (
+                  <div className="flex justify-center">
+                    <GoogleRecaptcha
+                      ref={recaptchaRef}
+                      siteKey={recaptchaSiteKey}
+                      onVerify={(token) => setCaptchaToken(token)}
+                      onExpire={() => setCaptchaToken('')}
+                    />
+                  </div>
+                )}
+
                 <div className="text-center pt-2">
                   <button
                     type="submit"
-                    className="inline-flex items-center space-x-2 px-6 py-2.5 bg-gold-500 hover:bg-gold-600 text-white rounded-xl font-semibold shadow-md transition"
+                    disabled={submitting}
+                    className="inline-flex items-center space-x-2 px-6 py-2.5 bg-gold-500 hover:bg-gold-600 text-white rounded-xl font-semibold shadow-md transition disabled:opacity-50 cursor-pointer"
                   >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Submit Seva Request</span>
+                    {submitting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" />
+                    )}
+                    <span>{submitting ? 'Submitting Seva Request...' : 'Submit Seva Request'}</span>
                   </button>
                 </div>
               </form>

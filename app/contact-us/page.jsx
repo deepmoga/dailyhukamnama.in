@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Mail, Phone, MapPin, Send, CheckCircle2, MessageCircle, HelpCircle } from 'lucide-react';
+import GoogleRecaptcha from '@/components/GoogleRecaptcha';
+import { Mail, Phone, MapPin, Send, CheckCircle2, MessageCircle, HelpCircle, Loader2, AlertCircle } from 'lucide-react';
 
 export default function ContactUsPage() {
   const [formData, setFormData] = useState({
@@ -13,14 +14,61 @@ export default function ContactUsPage() {
     message: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [recaptchaSiteKey, setRecaptchaSiteKey] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const recaptchaRef = useRef(null);
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    async function loadPublicSettings() {
+      try {
+        const res = await fetch('/api/public/settings');
+        const data = await res.json();
+        if (data.settings?.recaptcha_site_key) {
+          setRecaptchaSiteKey(data.settings.recaptcha_site_key);
+        }
+      } catch (err) {
+        console.warn('Could not load public settings:', err);
+      }
+    }
+    loadPublicSettings();
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
+    setErrorMessage('');
+    setSubmitting(true);
+
+    try {
+      const res = await fetch('/api/public/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          captchaToken,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to send message.');
+      }
+
+      setSubmitted(true);
       setFormData({ name: '', email: '', subject: '', message: '' });
-    }, 6000);
+      setCaptchaToken('');
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+      }
+    } catch (err) {
+      setErrorMessage(err.message);
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const faqs = [
@@ -129,12 +177,33 @@ export default function ContactUsPage() {
                   />
                 </div>
 
+                {errorMessage && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center space-x-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
+
+                {recaptchaSiteKey && (
+                  <GoogleRecaptcha
+                    ref={recaptchaRef}
+                    siteKey={recaptchaSiteKey}
+                    onVerify={(token) => setCaptchaToken(token)}
+                    onExpire={() => setCaptchaToken('')}
+                  />
+                )}
+
                 <button
                   type="submit"
-                  className="inline-flex items-center space-x-2 bg-gold-500 hover:bg-gold-600 text-white font-semibold text-xs px-6 py-3 rounded-full shadow transition"
+                  disabled={submitting}
+                  className="inline-flex items-center space-x-2 bg-gold-500 hover:bg-gold-600 text-white font-semibold text-xs px-6 py-3 rounded-full shadow transition disabled:opacity-50 cursor-pointer"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Send Message</span>
+                  {submitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
+                  <span>{submitting ? 'Sending Message...' : 'Send Message'}</span>
                 </button>
               </form>
             )}

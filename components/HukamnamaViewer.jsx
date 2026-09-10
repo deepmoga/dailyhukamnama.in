@@ -170,11 +170,17 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
         {/* ========================================================= */}
         {/* 🌟 BRANDED POSTER IMAGES (PAGE 1 & PAGE 2 IN SEQUENCE) 🌟 */}
         {/* ========================================================= */}
-        {hukamnama.source_image && (() => {
-          const posterPage1 = hukamnama.source_image.replace('-2.jpg', '-1.jpg');
-          const posterPage2 = hukamnama.source_image.includes('-1.jpg') 
-            ? hukamnama.source_image.replace('-1.jpg', '-2.jpg') 
-            : hukamnama.source_image.replace('.jpg', '-2.jpg');
+        {(() => {
+          let posterPages = [];
+          if (Array.isArray(hukamnama.poster_pages) && hukamnama.poster_pages.length > 0) {
+            posterPages = hukamnama.poster_pages;
+          } else if (hukamnama.source_image) {
+            const p1 = hukamnama.source_image.replace('-2.jpg', '-1.jpg');
+            posterPages = [p1];
+          }
+
+          if (posterPages.length === 0) return null;
+          const totalPages = posterPages.length;
 
           return (
             <div className="px-4 sm:px-8 pt-5 pb-6 bg-gradient-to-b from-white via-gold-50/15 to-white border-b border-gold-100/80">
@@ -182,29 +188,25 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
                 <div className="flex items-center space-x-2">
                   <ImageIcon className="w-4 h-4 text-gold-600" />
                   <h4 className="text-xs font-bold uppercase tracking-wider text-gold-800 font-serif-heading">
-                    Daily Hukamnama Sahib Branded Posters
+                    {totalPages === 1
+                      ? "Daily Hukamnama Sahib Branded Poster"
+                      : `Daily Hukamnama Sahib Branded Posters (${totalPages} Pages)`}
                   </h4>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 no-print">
-                  <a
-                    href={posterPage1}
-                    download={`daily-hukamnama-${hukamnama.hukamnama_date || 'today'}-page-1.jpg`}
-                    className="inline-flex items-center space-x-1 text-xs font-medium text-gold-800 hover:text-gold-900 bg-gold-50 hover:bg-gold-100 border border-gold-200 px-3 py-1.5 rounded-lg shadow-sm transition"
-                    title="Download Page 1 Poster"
-                  >
-                    <Download className="w-3.5 h-3.5 text-gold-600" />
-                    <span>Download Page 1</span>
-                  </a>
-                  <a
-                    href={posterPage2}
-                    download={`daily-hukamnama-${hukamnama.hukamnama_date || 'today'}-page-2.jpg`}
-                    className="inline-flex items-center space-x-1 text-xs font-medium text-gold-800 hover:text-gold-900 bg-gold-50 hover:bg-gold-100 border border-gold-200 px-3 py-1.5 rounded-lg shadow-sm transition"
-                    title="Download Page 2 Poster"
-                  >
-                    <Download className="w-3.5 h-3.5 text-gold-600" />
-                    <span>Download Page 2</span>
-                  </a>
+                  {posterPages.map((pageUrl, idx) => (
+                    <a
+                      key={idx}
+                      href={pageUrl}
+                      download={`daily-hukamnama-${hukamnama.hukamnama_date || 'today'}-page-${idx + 1}.jpg`}
+                      className="inline-flex items-center space-x-1 text-xs font-medium text-gold-800 hover:text-gold-900 bg-gold-50 hover:bg-gold-100 border border-gold-200 px-3 py-1.5 rounded-lg shadow-sm transition"
+                      title={totalPages === 1 ? "Download Poster" : `Download Page ${idx + 1} Poster`}
+                    >
+                      <Download className="w-3.5 h-3.5 text-gold-600" />
+                      <span>{totalPages === 1 ? "Download Poster" : `Download Page ${idx + 1}`}</span>
+                    </a>
+                  ))}
                   <button
                     onClick={() => setIsImageCollapsed(!isImageCollapsed)}
                     className="p-1.5 text-slate-500 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition"
@@ -216,62 +218,43 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
               </div>
 
               {!isImageCollapsed && (
-                <div className="flex flex-col gap-6 max-w-3xl mx-auto">
-                  {/* First Image: Page 1 */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-xs font-bold text-gold-900 bg-gold-100/90 border border-gold-300/80 px-3 py-1 rounded-full shadow-xs">
-                        ਪੰਨਾ ੧ : ਮੁੱਖਵਾਕ ਅਤੇ ਵਿਆਖਿਆ (Page 1)
-                      </span>
-                      <span className="text-[11px] text-slate-400 no-print">Click image to enlarge</span>
-                    </div>
-                    <div 
-                      className="relative rounded-2xl overflow-hidden shadow-md hover:shadow-xl border border-gold-300/90 bg-white group cursor-pointer transition-shadow"
-                      onClick={() => { setSelectedLightboxImage(posterPage1); setShowImageLightbox(true); }}
-                    >
-                      <div className="relative w-full flex items-center justify-center bg-stone-50">
-                        <img
-                          src={posterPage1}
-                          alt={`${hukamnama.title || "Daily Hukamnama Poster"} - Page 1`}
-                          className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-[1.008]"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 no-print">
-                          <span className="bg-slate-900/85 text-white text-xs px-3.5 py-1.5 rounded-full font-medium shadow-md flex items-center space-x-1.5 backdrop-blur-sm">
-                            <Maximize2 className="w-3.5 h-3.5 text-gold-400" />
-                            <span>Click to enlarge Page 1</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex flex-col gap-6 max-w-4xl mx-auto">
+                  {posterPages.map((pageUrl, idx) => {
+                    const pageNum = idx + 1;
+                    const gurNum = pageNum === 1 ? '੧' : pageNum === 2 ? '੨' : pageNum === 3 ? '੩' : pageNum;
+                    const pageBadge = totalPages === 1
+                      ? "ਸੰਪੂਰਨ ਮੁੱਖਵਾਕ, ਵਿਆਖਿਆ ਅਤੇ English Translation"
+                      : `ਪੰਨਾ ${gurNum} (Page ${pageNum})`;
 
-                  {/* Second Image: Page 2 */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-xs font-bold text-gold-900 bg-gold-100/90 border border-gold-300/80 px-3 py-1 rounded-full shadow-xs">
-                        ਪੰਨਾ ੨ : ਵਿਆਖਿਆ ਅਤੇ English Translation (Page 2)
-                      </span>
-                      <span className="text-[11px] text-slate-400 no-print">Click image to enlarge</span>
-                    </div>
-                    <div 
-                      className="relative rounded-2xl overflow-hidden shadow-md hover:shadow-xl border border-gold-300/90 bg-white group cursor-pointer transition-shadow"
-                      onClick={() => { setSelectedLightboxImage(posterPage2); setShowImageLightbox(true); }}
-                    >
-                      <div className="relative w-full flex items-center justify-center bg-stone-50">
-                        <img
-                          src={posterPage2}
-                          alt={`${hukamnama.title || "Daily Hukamnama Poster"} - Page 2`}
-                          className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-[1.008]"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 no-print">
-                          <span className="bg-slate-900/85 text-white text-xs px-3.5 py-1.5 rounded-full font-medium shadow-md flex items-center space-x-1.5 backdrop-blur-sm">
-                            <Maximize2 className="w-3.5 h-3.5 text-gold-400" />
-                            <span>Click to enlarge Page 2</span>
+                    return (
+                      <div key={idx} className="space-y-2">
+                        <div className="flex items-center justify-between px-1">
+                          <span className="text-xs font-bold text-gold-900 bg-gold-100/90 border border-gold-300/80 px-3 py-1 rounded-full shadow-xs">
+                            {pageBadge}
                           </span>
+                          <span className="text-[11px] text-slate-400 no-print">Click image to enlarge</span>
+                        </div>
+                        <div 
+                          className="relative rounded-2xl overflow-hidden shadow-md hover:shadow-xl border border-gold-300/90 bg-white group cursor-pointer transition-shadow"
+                          onClick={() => { setSelectedLightboxImage(pageUrl); setShowImageLightbox(true); }}
+                        >
+                          <div className="relative w-full flex items-center justify-center bg-stone-50">
+                            <img
+                              src={pageUrl}
+                              alt={`${hukamnama.title || "Daily Hukamnama Poster"} - Page ${pageNum}`}
+                              className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-[1.008]"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 no-print">
+                              <span className="bg-slate-900/85 text-white text-xs px-3.5 py-1.5 rounded-full font-medium shadow-md flex items-center space-x-1.5 backdrop-blur-sm">
+                                <Maximize2 className="w-3.5 h-3.5 text-gold-400" />
+                                <span>Click to enlarge {totalPages === 1 ? "Poster" : `Page ${pageNum}`}</span>
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -402,7 +385,8 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
         {/* ========================================================= */}
         {/* 🌟 VERSE-BY-VERSE (LINE-BY-LINE) SACRED PRESENTATION 🌟 */}
         {/* ========================================================= */}
-        <div className="p-6 sm:p-10 space-y-6">
+        {/* text align center */}
+        <div className="p-6 sm:p-10 space-y-6" style={{ textAlign: 'center' }}>
           {verses && verses.length > 0 ? (
             verses.map((verse, idx) => (
               <div 
@@ -528,13 +512,19 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
       </div>
 
       {/* Lightbox Modal for Full Image Zoom */}
-      {showImageLightbox && hukamnama.source_image && (() => {
-        const posterPage1 = hukamnama.source_image.replace('-2.jpg', '-1.jpg');
-        const posterPage2 = hukamnama.source_image.includes('-1.jpg') 
-          ? hukamnama.source_image.replace('-1.jpg', '-2.jpg') 
-          : hukamnama.source_image.replace('.jpg', '-2.jpg');
-        const currentSrc = selectedLightboxImage || posterPage1;
-        const isPage2 = currentSrc === posterPage2;
+      {showImageLightbox && (() => {
+        let posterPages = [];
+        if (Array.isArray(hukamnama.poster_pages) && hukamnama.poster_pages.length > 0) {
+          posterPages = hukamnama.poster_pages;
+        } else if (hukamnama.source_image) {
+          const p1 = hukamnama.source_image.replace('-2.jpg', '-1.jpg');
+          posterPages = [p1];
+        }
+
+        if (posterPages.length === 0) return null;
+
+        const currentSrc = selectedLightboxImage || posterPages[0];
+        const currentIndex = Math.max(0, posterPages.indexOf(currentSrc));
 
         return (
           <div 
@@ -545,37 +535,38 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
               <div className="w-full flex flex-wrap items-center justify-between text-white pb-3 gap-2">
                 <span className="text-sm font-semibold">{hukamnama.title}</span>
 
-                {/* Page 1 / 2 toggle inside lightbox */}
-                <div className="inline-flex rounded-lg bg-white/10 p-0.5 border border-white/20" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedLightboxImage(posterPage1)}
-                    className={`px-3 py-1 text-xs font-semibold rounded-md transition ${
-                      !isPage2 ? 'bg-gold-500 text-white shadow-sm' : 'text-white/80 hover:bg-white/10'
-                    }`}
-                  >
-                    ਪੰਨਾ ੧ (Page 1)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedLightboxImage(posterPage2)}
-                    className={`px-3 py-1 text-xs font-semibold rounded-md transition ${
-                      isPage2 ? 'bg-gold-500 text-white shadow-sm' : 'text-white/80 hover:bg-white/10'
-                    }`}
-                  >
-                    ਪੰਨਾ ੨ (Page 2)
-                  </button>
-                </div>
+                {/* Multi-page selector buttons inside lightbox if multiple pages */}
+                {posterPages.length > 1 && (
+                  <div className="inline-flex rounded-lg bg-white/10 p-0.5 border border-white/20" onClick={(e) => e.stopPropagation()}>
+                    {posterPages.map((pUrl, pIdx) => {
+                      const isActive = pUrl === currentSrc;
+                      const pageNum = pIdx + 1;
+                      const gurNum = pageNum === 1 ? '੧' : pageNum === 2 ? '੨' : pageNum === 3 ? '੩' : pageNum;
+                      return (
+                        <button
+                          key={pIdx}
+                          type="button"
+                          onClick={() => setSelectedLightboxImage(pUrl)}
+                          className={`px-3 py-1 text-xs font-semibold rounded-md transition ${
+                            isActive ? 'bg-gold-500 text-white shadow-sm' : 'text-white/80 hover:bg-white/10'
+                          }`}
+                        >
+                          ਪੰਨਾ {gurNum} (Page {pageNum})
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 <div className="flex items-center space-x-3">
                   <a
                     href={currentSrc}
-                    download={`daily-hukamnama-${hukamnama.hukamnama_date || 'today'}-page-${isPage2 ? '2' : '1'}.jpg`}
+                    download={`daily-hukamnama-${hukamnama.hukamnama_date || 'today'}-page-${currentIndex + 1}.jpg`}
                     className="inline-flex items-center space-x-1 text-xs bg-gold-500 hover:bg-gold-600 text-white px-3 py-1.5 rounded-lg shadow"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Download {isPage2 ? 'Page 2' : 'Page 1'} HD</span>
+                    <span>Download {posterPages.length > 1 ? `Page ${currentIndex + 1}` : 'Poster'} HD</span>
                   </a>
                   <button
                     onClick={() => setShowImageLightbox(false)}
@@ -592,7 +583,7 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
               >
                 <img
                   src={currentSrc}
-                  alt={`${hukamnama.title} - ${isPage2 ? 'Page 2' : 'Page 1'}`}
+                  alt={`${hukamnama.title} - Page ${currentIndex + 1}`}
                   className="max-h-[80vh] w-auto mx-auto object-contain rounded"
                 />
               </div>
