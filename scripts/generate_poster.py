@@ -348,6 +348,23 @@ def generate_posters(payload):
     y += 18
     punjabi_date_str = payload.get("punjabi_date_str", "").strip()
     if punjabi_date_str:
+        replacements = [
+            ("Su`krvwr", "ਸ਼ੁੱਕਰਵਾਰ"), ("vIrvwr", "ਵੀਰਵਾਰ"), ("bu`Dvwr", "ਬੁੱਧਵਾਰ"),
+            ("mMglvwr", "ਮੰਗਲਵਾਰ"), ("somvwr", "ਸੋਮਵਾਰ"), ("AYqvwr", "ਐਤਵਾਰ"),
+            ("SnIvwr", "ਸ਼ਨੀਵਾਰ"), ("cyq", "ਚੇਤ"), ("vYswK", "ਵਿਸਾਖ"),
+            ("jyT", "ਜੇਠ"), ("hwV", "ਹਾੜ"), ("swvx", "ਸਾਵਣ"),
+            ("BwdoN", "ਭਾਦੋਂ"), ("A`sU", "ਅੱਸੂ"), ("AsU", "ਅੱਸੂ"),
+            ("k`qk", "ਕੱਤਕ"), ("kqk", "ਕੱਤਕ"), ("m`Gr", "ਮੱਘਰ"),
+            ("mGr", "ਮੱਘਰ"), ("poh", "ਪੋਹ"), ("mwG", "ਮਾਘ"),
+            ("P`gx", "ਫੱਗਣ"), ("Pgx", "ਫੱਗਣ"), ("sMmq", "ਸੰਮਤ"),
+            ("nwnkSwhI", "ਨਾਨਕਸ਼ਾਹੀ"), ("drbwr swihb", "ਦਰਬਾਰ ਸਾਹਿਬ"),
+            ("hukmnwmw", "ਹੁਕਮਨਾਮਾ")
+        ]
+        for old_t, new_t in replacements:
+            punjabi_date_str = punjabi_date_str.replace(old_t, new_t)
+        num_map = {'0':'੦', '1':'੧', '2':'੨', '3':'੩', '4':'੪', '5':'੫', '6':'੬', '7':'੭', '8':'੮', '9':'੯'}
+        punjabi_date_str = "".join(num_map.get(ch, ch) for ch in punjabi_date_str)
+
         bbox = f_ang_date.get_bbox((0, 0), punjabi_date_str)
         f_ang_date.draw_text(bg1, (CENTER_X - (bbox[2] - bbox[0]) / 2, y), punjabi_date_str, fill="#000000")
         y += (bbox[3] - bbox[1]) + 20

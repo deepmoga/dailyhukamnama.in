@@ -9,7 +9,10 @@ ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect('62.84.184.96', username='root', password='gDdsK5j9EGN8yyHlg1I12r1AD', timeout=15)
 
 commands = [
+    "cp /home/demo.dailyhukamnama.in/app/public/assets/images/bg.jpg /tmp/user_bg.jpg || true",
+    "cd /home/demo.dailyhukamnama.in/app && git checkout -- assets/images/bg.jpg public/assets/images/bg.jpg public/uploads/ scripts/sync_cron.sh || git stash",
     "cd /home/demo.dailyhukamnama.in/app && git pull origin main",
+    "cp /tmp/user_bg.jpg /home/demo.dailyhukamnama.in/app/public/assets/images/bg.jpg && cp /tmp/user_bg.jpg /home/demo.dailyhukamnama.in/app/assets/images/bg.jpg || true",
     "pip3 install --break-system-packages uharfbuzz freetype-py Pillow",
     "cd /home/demo.dailyhukamnama.in/app && npm run build",
     "pm2 restart demo.dailyhukamnama.in",
