@@ -14,10 +14,12 @@ commands = [
     "cd /home/demo.dailyhukamnama.in/app && git pull origin main",
     "cp /tmp/user_bg.jpg /home/demo.dailyhukamnama.in/app/public/assets/images/bg.jpg && cp /tmp/user_bg.jpg /home/demo.dailyhukamnama.in/app/assets/images/bg.jpg || true",
     "pip3 install --break-system-packages uharfbuzz freetype-py Pillow",
+    "cd /home/demo.dailyhukamnama.in/app && npm install",
+    "cd /home/demo.dailyhukamnama.in/app && node --env-file=.env.local -e \"import('./lib/settings-service.js').then(m => m.ensureTablesExist()).then(() => { console.log('VPS DB Settings Tables Initialized!'); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })\"",
     "cd /home/demo.dailyhukamnama.in/app && npm run build",
     "pm2 restart demo.dailyhukamnama.in",
     "python3 -c \"import uharfbuzz, freetype, PIL; print('Python libraries ready!')\"",
-    "cd /home/demo.dailyhukamnama.in/app && node --env-file=.env.local -e \"import('./lib/hukamnama-service.js').then(m => m.forceRegeneratePoster()).then(r => console.log('Regenerated:', r)).catch(e => console.error(e));\""
+    "cd /home/demo.dailyhukamnama.in/app && node --env-file=.env.local -e \"import('./lib/hukamnama-service.js').then(m => m.forceRegeneratePoster()).then(r => { console.log('Regenerated:', r); process.exit(0); }).catch(e => { console.error(e); process.exit(1); });\""
 ]
 
 for cmd in commands:
