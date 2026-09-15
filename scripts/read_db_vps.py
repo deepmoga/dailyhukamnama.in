@@ -9,7 +9,10 @@ ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect('62.84.184.96', username='root', password='gDdsK5j9EGN8yyHlg1I12r1AD', timeout=15)
 
 cmds = [
-    "cd /home/demo.dailyhukamnama.in/app && node --env-file=.env.local -e \"import('./lib/hukamnama-service.js').then(m => m.forceRegeneratePoster()).then(r => console.log('RegenResult:', r)).catch(e => console.error('RegenErr:', e));\""
+    "crontab -l || true",
+    "tail -n 25 /var/log/hukamnama_cron.log || true",
+    "cd /home/demo.dailyhukamnama.in/app && node --env-file=.env.local -e \"import('./lib/hukamnama-service.js').then(async m => { console.log('Formatted today in IST:', m.formatDate(new Date())); process.exit(0); })\"",
+    "curl -s https://www.sikhnet.com/hukam | grep -i -C 3 'hukam' | head -n 30 || true"
 ]
 
 for cmd in cmds:

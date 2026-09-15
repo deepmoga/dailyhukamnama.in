@@ -95,8 +95,19 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
     window.print();
   };
 
-  const dateFormatted = hukamnama.hukamnama_date 
-    ? new Date(hukamnama.hukamnama_date).toLocaleDateString('en-US', {
+  const parseSafeDate = (dateStr) => {
+    if (!dateStr) return null;
+    const clean = String(dateStr).split('T')[0];
+    const parts = clean.split('-').map(Number);
+    if (parts.length === 3 && !parts.some(isNaN)) {
+      return new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+    }
+    return new Date(dateStr);
+  };
+
+  const safeDate = parseSafeDate(hukamnama.hukamnama_date);
+  const dateFormatted = safeDate 
+    ? safeDate.toLocaleDateString('en-US', {
         month: 'long',
         day: 'numeric',
         year: 'numeric',
@@ -115,8 +126,8 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
             <div className="inline-flex items-center space-x-2 text-xs font-semibold text-gold-700 bg-gold-100/70 border border-gold-300/60 px-3 py-1 rounded-full">
               <Calendar className="w-3.5 h-3.5 text-gold-600" />
               <span>
-                {hukamnama.hukamnama_date 
-                  ? new Date(hukamnama.hukamnama_date).toLocaleDateString('en-US', {
+                {safeDate 
+                  ? safeDate.toLocaleDateString('en-US', {
                       weekday: 'long',
                       year: 'numeric',
                       month: 'long',
