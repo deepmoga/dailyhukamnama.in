@@ -558,44 +558,127 @@ export default function PageForm({ initialData = {}, isEdit = false }) {
               </h4>
             </div>
 
+            {/* Meta Title */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Meta Title
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-700">
+                  Meta Title
+                </label>
+                <span
+                  className={`text-[11px] font-mono font-medium px-2 py-0.5 rounded-md border transition-colors ${
+                    metaTitle.length === 0
+                      ? 'text-slate-400 bg-slate-50 border-slate-200'
+                      : metaTitle.length <= 60
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-300'
+                      : 'text-rose-700 bg-rose-50 border-rose-300'
+                  }`}
+                >
+                  {metaTitle.length}/60 chars
+                </span>
+              </div>
               <input
                 type="text"
                 value={metaTitle}
                 onChange={(e) => setMetaTitle(e.target.value)}
                 placeholder="Title shown on Google & social shares"
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold-500 focus:bg-white outline-none"
+                className={`w-full px-3 py-2 text-xs bg-slate-50 border rounded-xl outline-none transition focus:bg-white ${
+                  metaTitle.length === 0
+                    ? 'border-slate-300 focus:ring-2 focus:ring-gold-500'
+                    : metaTitle.length <= 60
+                    ? 'border-emerald-400 focus:ring-2 focus:ring-emerald-500'
+                    : 'border-rose-400 focus:ring-2 focus:ring-rose-500'
+                }`}
               />
+              <div className="flex items-center justify-between mt-1 text-[10px]">
+                <span className="text-slate-400">Page title tag in browser & search.</span>
+                <span className={metaTitle.length > 60 ? 'text-rose-600 font-semibold' : 'text-slate-500'}>
+                  {metaTitle.length > 60
+                    ? `⚠️ ${metaTitle.length - 60} chars over recommended 60`
+                    : '✓ Recommended: up to 60 characters'}
+                </span>
+              </div>
             </div>
 
+            {/* Meta Description */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Meta Description
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-700">
+                  Meta Description
+                </label>
+                <span
+                  className={`text-[11px] font-mono font-medium px-2 py-0.5 rounded-md border transition-colors ${
+                    metaDesc.length === 0
+                      ? 'text-slate-400 bg-slate-50 border-slate-200'
+                      : metaDesc.length <= 160
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-300'
+                      : 'text-rose-700 bg-rose-50 border-rose-300'
+                  }`}
+                >
+                  {metaDesc.length}/160 chars
+                </span>
+              </div>
               <textarea
                 rows={3}
                 value={metaDesc}
                 onChange={(e) => setMetaDesc(e.target.value)}
                 placeholder="Brief summary of the page for search engines..."
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold-500 focus:bg-white outline-none resize-none"
+                className={`w-full px-3 py-2 text-xs bg-slate-50 border rounded-xl outline-none resize-none transition focus:bg-white ${
+                  metaDesc.length === 0
+                    ? 'border-slate-300 focus:ring-2 focus:ring-gold-500'
+                    : metaDesc.length <= 160
+                    ? 'border-emerald-400 focus:ring-2 focus:ring-emerald-500'
+                    : 'border-rose-400 focus:ring-2 focus:ring-rose-500'
+                }`}
               />
+              <div className="flex items-center justify-between mt-1 text-[10px]">
+                <span className="text-slate-400">Snippet for search engine results.</span>
+                <span className={metaDesc.length > 160 ? 'text-rose-600 font-semibold' : 'text-slate-500'}>
+                  {metaDesc.length > 160
+                    ? `⚠️ ${metaDesc.length - 160} chars over recommended 160`
+                    : '✓ Recommended: up to 160 characters'}
+                </span>
+              </div>
             </div>
 
+            {/* Meta Keywords */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Meta Keywords
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-700">
+                  Meta Keywords
+                </label>
+                <span
+                  className={`text-[11px] font-mono font-medium px-2 py-0.5 rounded-md border transition-colors ${
+                    metaKeywords.length === 0
+                      ? 'text-slate-400 bg-slate-50 border-slate-200'
+                      : metaKeywords.length <= 60
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-300'
+                      : 'text-rose-700 bg-rose-50 border-rose-300'
+                  }`}
+                >
+                  {metaKeywords.length}/60 chars
+                </span>
+              </div>
               <input
                 type="text"
                 value={metaKeywords}
                 onChange={(e) => setMetaKeywords(e.target.value)}
                 placeholder="e.g. daily hukamnama, japji sahib, amritsar"
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold-500 focus:bg-white outline-none"
+                className={`w-full px-3 py-2 text-xs bg-slate-50 border rounded-xl outline-none transition focus:bg-white ${
+                  metaKeywords.length === 0
+                    ? 'border-slate-300 focus:ring-2 focus:ring-gold-500'
+                    : metaKeywords.length <= 60
+                    ? 'border-emerald-400 focus:ring-2 focus:ring-emerald-500'
+                    : 'border-rose-400 focus:ring-2 focus:ring-rose-500'
+                }`}
               />
-              <p className="text-[10px] text-slate-400 mt-1">Separate keywords with commas.</p>
+              <div className="flex items-center justify-between mt-1 text-[10px]">
+                <span className="text-slate-400">Separate keywords with commas.</span>
+                <span className={metaKeywords.length > 60 ? 'text-rose-600 font-semibold' : 'text-slate-500'}>
+                  {metaKeywords.length > 60
+                    ? `⚠️ ${metaKeywords.length - 60} chars over recommended 60`
+                    : '✓ Recommended: up to 60 characters'}
+                </span>
+              </div>
             </div>
           </div>
         </div>

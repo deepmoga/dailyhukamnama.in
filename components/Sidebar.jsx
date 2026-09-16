@@ -96,7 +96,7 @@ export default function Sidebar({
           <div className="flex items-center space-x-2">
             <Clock className="w-4 h-4 text-white" />
             <h3 className="font-bold text-sm uppercase tracking-wider">
-              Last 5 Hukamnamas
+              Last 10 Hukamnamas
             </h3>
           </div>
           <span className="text-[11px] bg-white/20 px-2 py-0.5 rounded-full font-medium">

@@ -57,6 +57,7 @@ export default function AdminLayout({ children }) {
 
   const navItems = [
     { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { label: 'Hukamnamas', href: '/admin/hukamnamas', icon: Sparkles },
     { label: 'Pages Manager', href: '/admin/pages', icon: FileText },
     { label: 'Path Pages', href: '/admin/pages?type=path', icon: BookOpen },
     { label: 'Volunteers', href: '/admin/volunteers', icon: Users },

@@ -19,7 +19,6 @@ export async function GET() {
     let relUrl = (settings?.favicon || '').trim();
     if (!relUrl) relUrl = '/logo.png';
 
-    // Remove query params if any
     relUrl = relUrl.split('?')[0];
 
     const cleanPath = relUrl.startsWith('/') ? relUrl.slice(1) : relUrl;
@@ -35,7 +34,7 @@ export async function GET() {
     }
 
     const ext = path.extname(targetPath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'image/png';
+    const contentType = MIME_TYPES[ext] || 'image/x-icon';
     const buffer = await fs.promises.readFile(targetPath);
 
     return new Response(buffer, {
@@ -47,7 +46,7 @@ export async function GET() {
       },
     });
   } catch (err) {
-    console.error('Favicon serve error:', err);
+    console.error('Favicon.ico serve error:', err);
     return new Response('Error serving favicon', { status: 500 });
   }
 }

@@ -6,7 +6,7 @@ import GoogleRecaptcha from '@/components/GoogleRecaptcha';
 import { 
   Settings, Mail, ShieldCheck, Image as ImageIcon, Save, 
   Send, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, 
-  Upload, ExternalLink, RefreshCw, Key, HelpCircle
+  Upload, ExternalLink, RefreshCw, Key, HelpCircle, Globe
 } from 'lucide-react';
 
 export default function AdminSettingsPage() {
@@ -33,6 +33,9 @@ export default function AdminSettingsPage() {
     footer_logo: '/logo.png',
     favicon: '/logo.png',
     site_title: 'Daily Hukamnama',
+    site_meta_title: '',
+    site_meta_desc: '',
+    site_meta_keywords: '',
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -182,6 +185,7 @@ export default function AdminSettingsPage() {
     { id: 'smtp', label: 'Email & Google SMTP', icon: Mail },
     { id: 'captcha', label: 'Google reCAPTCHA', icon: ShieldCheck },
     { id: 'branding', label: 'Branding & Media', icon: ImageIcon },
+    { id: 'seo', label: 'SEO & Meta Tags', icon: Globe },
   ];
 
   return (
@@ -191,7 +195,7 @@ export default function AdminSettingsPage() {
         type="file"
         ref={fileInputRef}
         onChange={handleFileUpload}
-        accept="image/*"
+        accept="image/*,.ico,.png,.jpg,.jpeg,.svg,.webp"
         className="hidden"
       />
 
@@ -681,6 +685,147 @@ export default function AdminSettingsPage() {
                 placeholder="Daily Hukamnama"
                 className="w-full sm:w-1/2 px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-gold-500 outline-none text-xs"
               />
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: SEO & Meta Tags */}
+        {activeTab === 'seo' && (
+          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6 animate-fadeIn">
+            <div className="border-b border-slate-200 pb-4">
+              <h3 className="text-base font-bold text-slate-900 flex items-center space-x-2">
+                <Globe className="w-5 h-5 text-gold-500" />
+                <span>Default Site SEO & Meta Tags</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Configure default title, description and keywords across the website for search engines.
+              </p>
+            </div>
+
+            {/* Meta Title */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700">
+                  Default Site Meta Title
+                </label>
+                <span
+                  className={`text-[11px] font-mono font-medium px-2 py-0.5 rounded-md border transition-colors ${
+                    (formData.site_meta_title || '').length === 0
+                      ? 'text-slate-400 bg-slate-50 border-slate-200'
+                      : (formData.site_meta_title || '').length <= 60
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-300'
+                      : 'text-rose-700 bg-rose-50 border-rose-300'
+                  }`}
+                >
+                  {(formData.site_meta_title || '').length}/60 chars
+                </span>
+              </div>
+              <input
+                type="text"
+                name="site_meta_title"
+                value={formData.site_meta_title || ''}
+                onChange={handleChange}
+                placeholder="Today's Daily Hukamnama | Sachkhand Sri Harmandir Sahib Amritsar"
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs outline-none transition focus:bg-white ${
+                  (formData.site_meta_title || '').length === 0
+                    ? 'border-slate-300 focus:ring-2 focus:ring-gold-500'
+                    : (formData.site_meta_title || '').length <= 60
+                    ? 'border-emerald-400 focus:ring-2 focus:ring-emerald-500'
+                    : 'border-rose-400 focus:ring-2 focus:ring-rose-500'
+                }`}
+              />
+              <div className="flex items-center justify-between mt-1 text-[10px]">
+                <span className="text-slate-400">Default title tag across pages.</span>
+                <span className={(formData.site_meta_title || '').length > 60 ? 'text-rose-600 font-semibold' : 'text-slate-500'}>
+                  {(formData.site_meta_title || '').length > 60
+                    ? `⚠️ ${(formData.site_meta_title || '').length - 60} chars over recommended 60`
+                    : '✓ Recommended: up to 60 characters'}
+                </span>
+              </div>
+            </div>
+
+            {/* Meta Description */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700">
+                  Default Meta Description
+                </label>
+                <span
+                  className={`text-[11px] font-mono font-medium px-2 py-0.5 rounded-md border transition-colors ${
+                    (formData.site_meta_desc || '').length === 0
+                      ? 'text-slate-400 bg-slate-50 border-slate-200'
+                      : (formData.site_meta_desc || '').length <= 160
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-300'
+                      : 'text-rose-700 bg-rose-50 border-rose-300'
+                  }`}
+                >
+                  {(formData.site_meta_desc || '').length}/160 chars
+                </span>
+              </div>
+              <textarea
+                name="site_meta_desc"
+                rows={3}
+                value={formData.site_meta_desc || ''}
+                onChange={handleChange}
+                placeholder="Read today's Daily Hukamnama (Mukhwak) from Sachkhand Sri Harmandir Sahib (Golden Temple), Amritsar with Gurmukhi text, Punjabi Viakhya, English and Hindi translations."
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs outline-none resize-none transition focus:bg-white ${
+                  (formData.site_meta_desc || '').length === 0
+                    ? 'border-slate-300 focus:ring-2 focus:ring-gold-500'
+                    : (formData.site_meta_desc || '').length <= 160
+                    ? 'border-emerald-400 focus:ring-2 focus:ring-emerald-500'
+                    : 'border-rose-400 focus:ring-2 focus:ring-rose-500'
+                }`}
+              />
+              <div className="flex items-center justify-between mt-1 text-[10px]">
+                <span className="text-slate-400">Search engine summary snippet.</span>
+                <span className={(formData.site_meta_desc || '').length > 160 ? 'text-rose-600 font-semibold' : 'text-slate-500'}>
+                  {(formData.site_meta_desc || '').length > 160
+                    ? `⚠️ ${(formData.site_meta_desc || '').length - 160} chars over recommended 160`
+                    : '✓ Recommended: up to 160 characters'}
+                </span>
+              </div>
+            </div>
+
+            {/* Meta Keywords */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700">
+                  Default Meta Keywords
+                </label>
+                <span
+                  className={`text-[11px] font-mono font-medium px-2 py-0.5 rounded-md border transition-colors ${
+                    (formData.site_meta_keywords || '').length === 0
+                      ? 'text-slate-400 bg-slate-50 border-slate-200'
+                      : (formData.site_meta_keywords || '').length <= 60
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-300'
+                      : 'text-rose-700 bg-rose-50 border-rose-300'
+                  }`}
+                >
+                  {(formData.site_meta_keywords || '').length}/60 chars
+                </span>
+              </div>
+              <input
+                type="text"
+                name="site_meta_keywords"
+                value={formData.site_meta_keywords || ''}
+                onChange={handleChange}
+                placeholder="daily hukamnama, hukamnama today, golden temple hukamnama"
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs outline-none transition focus:bg-white ${
+                  (formData.site_meta_keywords || '').length === 0
+                    ? 'border-slate-300 focus:ring-2 focus:ring-gold-500'
+                    : (formData.site_meta_keywords || '').length <= 60
+                    ? 'border-emerald-400 focus:ring-2 focus:ring-emerald-500'
+                    : 'border-rose-400 focus:ring-2 focus:ring-rose-500'
+                }`}
+              />
+              <div className="flex items-center justify-between mt-1 text-[10px]">
+                <span className="text-slate-400">Separate keywords with commas.</span>
+                <span className={(formData.site_meta_keywords || '').length > 60 ? 'text-rose-600 font-semibold' : 'text-slate-500'}>
+                  {(formData.site_meta_keywords || '').length > 60
+                    ? `⚠️ ${(formData.site_meta_keywords || '').length - 60} chars over recommended 60`
+                    : '✓ Recommended: up to 60 characters'}
+                </span>
+              </div>
             </div>
           </div>
         )}

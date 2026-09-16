@@ -63,15 +63,22 @@ export default function AdminDashboard() {
 
           <div className="flex flex-wrap gap-2.5">
             <Link
+              href="/admin/hukamnamas"
+              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-600 hover:to-amber-700 text-white rounded-xl text-xs font-semibold shadow-md transition"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Manage Hukamnamas</span>
+            </Link>
+            <Link
               href="/admin/pages/new"
-              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-gold-500 hover:bg-gold-600 text-white rounded-xl text-xs font-semibold shadow-md transition"
+              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold border border-slate-700 transition"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Create New Page</span>
             </Link>
             <Link
               href="/admin/poster-template"
-              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow-md transition"
+              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold border border-slate-700 transition"
             >
               <ImageIcon className="w-4 h-4" />
               <span>Poster Template</span>
