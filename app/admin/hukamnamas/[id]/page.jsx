@@ -83,18 +83,24 @@ export default function EditHukamnamaPage({ params }) {
     const cleanAng = formData.ang ? String(formData.ang).trim() : '';
     const cleanRaag = formData.raag ? formData.raag.replace(/\s*\([^)]*\)/g, '').split('/')[0].trim() : '';
     
-    let dateFormatted = formData.hukamnama_date;
+    let dateFormatted = '';
     if (formData.hukamnama_date) {
-      try {
-        const d = new Date(`${formData.hukamnama_date}T12:00:00+05:30`);
-        dateFormatted = d.toLocaleDateString('en-US', {
-          timeZone: 'Asia/Kolkata',
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric'
-        });
-      } catch (e) {}
+      const clean = String(formData.hukamnama_date).split('T')[0].trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+        const [y, m, d] = clean.split('-').map(Number);
+        const dt = new Date(y, m - 1, d, 12, 0, 0);
+        if (!isNaN(dt.getTime())) {
+          dateFormatted = dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        }
+      }
+      if (!dateFormatted) {
+        const dt = new Date(formData.hukamnama_date);
+        if (!isNaN(dt.getTime())) {
+          dateFormatted = dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        }
+      }
     }
+    dateFormatted = dateFormatted || formData.hukamnama_date || '';
 
     const imageAlt = `Daily Hukamnama Sri Darbar Sahib Amritsar - ${dateFormatted}${cleanAng ? ` - Ang ${cleanAng}` : ''}${cleanRaag ? ` ${cleanRaag}` : ''}`.trim();
     const metaDesc = `Daily Hukamnama Sri Darbar Sahib Amritsar today (${dateFormatted}).${cleanAng ? ` Ang ${cleanAng},` : ''}${cleanRaag ? ` ${cleanRaag}.` : ''} Gurmukhi Mukhwak, Punjabi Viakhya, Hindi & English translation.`.trim();
