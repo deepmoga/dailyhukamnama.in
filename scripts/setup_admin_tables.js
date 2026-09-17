@@ -58,6 +58,17 @@ async function setup() {
     // column already exists
   }
 
+  // Ensure hukamnamas SEO columns exist
+  try {
+    await conn.query(`ALTER TABLE hukamnamas ADD COLUMN meta_desc TEXT NULL AFTER source_image;`);
+  } catch (e) {}
+  try {
+    await conn.query(`ALTER TABLE hukamnamas ADD COLUMN meta_keywords VARCHAR(500) NULL AFTER meta_desc;`);
+  } catch (e) {}
+  try {
+    await conn.query(`ALTER TABLE hukamnamas ADD COLUMN image_alt VARCHAR(255) NULL AFTER meta_keywords;`);
+  } catch (e) {}
+
 
   // 2. volunteers table
   await conn.query(`

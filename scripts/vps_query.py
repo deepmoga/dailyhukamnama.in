@@ -10,9 +10,16 @@ ssh.connect('62.84.184.96', username='root', password='gDdsK5j9EGN8yyHlg1I12r1AD
 
 script = """
 import('./lib/db.js').then(async m => {
-  const r = await m.query("SELECT id, title, slug, punjabi_title, page_type, show_in_menu, sort_order FROM pages WHERE page_type='path' ORDER BY sort_order ASC, id ASC");
-  console.log('PATHS_COUNT:', r.length);
-  console.log('PATHS_IN_DB:', JSON.stringify(r, null, 2));
+  const r = await m.query("SELECT id, title, slug, content FROM pages WHERE page_type = 'sikh_guru'");
+  for (const g of r) {
+    let clean = (g.content || '')
+      .replace(/<h3>\s*Life History &amp; Divine Mission\s*<\/h3>/gi, '')
+      .replace(/<h3>\s*Life History & Divine Mission\s*<\/h3>/gi, '')
+      .replace(/<h3>\s*Major Sacred Banis.*$/gis, '');
+
+    await m.query("UPDATE pages SET content = ? WHERE id = ?", [clean.trim(), g.id]);
+    console.log('Cleaned page ID:', g.id, g.title);
+  }
   process.exit(0);
 }).catch(e => {
   console.error(e);

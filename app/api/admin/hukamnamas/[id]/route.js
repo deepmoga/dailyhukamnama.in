@@ -3,7 +3,8 @@ import { query } from '@/lib/db';
 import { 
   getPosterPagesForDate, 
   anmolLipiToGurmukhi, 
-  forceRegeneratePoster 
+  forceRegeneratePoster,
+  generateHukamnamaSeoMetadata
 } from '@/lib/hukamnama-service';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,7 @@ export async function GET(request, { params }) {
       `SELECT id, DATE_FORMAT(hukamnama_date, '%Y-%m-%d') as hukamnama_date, 
               title, gurmukhi_header, shabad_title, ang, raag, author, 
               content_html, gurmukhi_only, punjabi_arth, english_translation, hindi_translation, 
-              source_pdf, source_image, views, created_at
+              source_pdf, source_image, meta_desc, meta_keywords, image_alt, views, created_at
        FROM hukamnamas WHERE id = ? LIMIT 1`,
       [id]
     );
@@ -27,6 +28,17 @@ export async function GET(request, { params }) {
     const h = rows[0];
     h.gurmukhi_header = anmolLipiToGurmukhi(h.gurmukhi_header);
     h.poster_pages = getPosterPagesForDate(h.hukamnama_date, h.source_image);
+
+    // Provide default fallback SEO if null
+    const seo = generateHukamnamaSeoMetadata({
+      dateStr: h.hukamnama_date,
+      ang: h.ang,
+      raag: h.raag,
+      author: h.author,
+    });
+    h.image_alt = h.image_alt || seo.imageAlt;
+    h.meta_desc = h.meta_desc || seo.metaDesc;
+    h.meta_keywords = h.meta_keywords || seo.metaKeywords;
 
     return NextResponse.json({ success: true, hukamnama: h });
   } catch (err) {
@@ -53,6 +65,9 @@ export async function PUT(request, { params }) {
       english_translation,
       hindi_translation,
       content_html,
+      meta_desc,
+      meta_keywords,
+      image_alt,
       regenerate_poster = false,
     } = body;
 
@@ -61,6 +76,18 @@ export async function PUT(request, { params }) {
     }
 
     const cleanDate = String(hukamnama_date).split('T')[0].trim();
+
+    // Generate fallback SEO if fields left completely blank
+    const fallbackSeo = generateHukamnamaSeoMetadata({
+      dateStr: cleanDate,
+      ang,
+      raag,
+      author,
+    });
+
+    const finalMetaDesc = meta_desc !== undefined && meta_desc !== null && meta_desc !== '' ? meta_desc : fallbackSeo.metaDesc;
+    const finalMetaKeywords = meta_keywords !== undefined && meta_keywords !== null && meta_keywords !== '' ? meta_keywords : fallbackSeo.metaKeywords;
+    const finalImageAlt = image_alt !== undefined && image_alt !== null && image_alt !== '' ? image_alt : fallbackSeo.imageAlt;
 
     await query(
       `UPDATE hukamnamas SET
@@ -75,7 +102,10 @@ export async function PUT(request, { params }) {
         punjabi_arth = ?,
         english_translation = ?,
         hindi_translation = ?,
-        content_html = ?
+        content_html = ?,
+        meta_desc = ?,
+        meta_keywords = ?,
+        image_alt = ?
        WHERE id = ?`,
       [
         cleanDate,
@@ -90,6 +120,9 @@ export async function PUT(request, { params }) {
         english_translation || null,
         hindi_translation || null,
         content_html || null,
+        finalMetaDesc,
+        finalMetaKeywords,
+        finalImageAlt,
         id,
       ]
     );
@@ -107,7 +140,7 @@ export async function PUT(request, { params }) {
       `SELECT id, DATE_FORMAT(hukamnama_date, '%Y-%m-%d') as hukamnama_date, 
               title, gurmukhi_header, shabad_title, ang, raag, author, 
               content_html, gurmukhi_only, punjabi_arth, english_translation, hindi_translation, 
-              source_pdf, source_image, views, created_at
+              source_pdf, source_image, meta_desc, meta_keywords, image_alt, views, created_at
        FROM hukamnamas WHERE id = ? LIMIT 1`,
       [id]
     );

@@ -12,12 +12,30 @@ export async function generateMetadata({ params }) {
   const hukamnama = await getHukamnamaByDate(dateStr);
   if (!hukamnama) return { title: 'Hukamnama Not Found' };
 
+  const description = hukamnama.meta_desc || `Read the Daily Hukamnama from Sri Darbar Sahib, Amritsar for ${dateStr} with Gurmukhi text, Punjabi Viakhya, English, and Hindi translations.`;
+  const keywords = hukamnama.meta_keywords || `daily hukamnama, golden temple hukamnama, sri darbar sahib mukhwak, ${dateStr}`;
+  const imageAlt = hukamnama.image_alt || hukamnama.title || 'Daily Hukamnama Sri Darbar Sahib Amritsar';
+  const imageUrl = hukamnama.source_image || '/slider1.jpg';
+
   return {
     title: `${hukamnama.title} | Sri Darbar Sahib Amritsar`,
-    description: `Read the Daily Hukamnama from Sri Darbar Sahib, Amritsar for ${dateStr} with Gurmukhi text, Punjabi Viakhya, English, and Hindi translations.`,
+    description,
+    keywords,
     openGraph: {
       title: hukamnama.title,
-      images: hukamnama.source_image ? [hukamnama.source_image] : ['/slider1.jpg'],
+      description,
+      images: [
+        {
+          url: imageUrl,
+          alt: imageAlt,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: hukamnama.title,
+      description,
+      images: [imageUrl],
     },
   };
 }

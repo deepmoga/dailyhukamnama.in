@@ -34,6 +34,9 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
   const [showImageLightbox, setShowImageLightbox] = useState(false);
   const [selectedLightboxImage, setSelectedLightboxImage] = useState(null);
   const [isImageCollapsed, setIsImageCollapsed] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [shareAlertMessage, setShareAlertMessage] = useState('');
 
   if (loading) {
     return (
@@ -84,11 +87,63 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const handleShare = () => {
-    const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://dailyhukamnama.in';
-    const text = `Today's Daily Hukamnama from Sri Darbar Sahib: ${shareUrl}`;
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    window.open(whatsappUrl, '_blank');
+  const getShareDetails = () => {
+    const url = typeof window !== 'undefined' ? window.location.href : 'https://dailyhukamnama.in';
+    const cleanAng = hukamnama.ang ? ` (Ang: ${hukamnama.ang})` : '';
+    const cleanRaag = hukamnama.raag ? ` - ${hukamnama.raag}` : '';
+    const titleText = `Daily Hukamnama Sri Darbar Sahib Amritsar${dateFormatted ? ` • ${dateFormatted}` : ''}${cleanAng}${cleanRaag}`;
+    return { url, titleText };
+  };
+
+  const handleCopyShareUrl = () => {
+    const { url } = getShareDetails();
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    }
+  };
+
+  const handleSharePlatform = (platform) => {
+    const { url, titleText } = getShareDetails();
+    const encodedUrl = encodeURIComponent(url);
+    const encodedText = encodeURIComponent(`${titleText}\n\nRead full Gurmukhi, Viakhya & translations at:\n${url}`);
+
+    if (platform === 'whatsapp') {
+      window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+    } else if (platform === 'facebook') {
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, '_blank', 'noopener,noreferrer,width=600,height=500');
+    } else if (platform === 'twitter') {
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(titleText)}&url=${encodedUrl}`, '_blank', 'noopener,noreferrer,width=600,height=500');
+    } else if (platform === 'threads') {
+      window.open(`https://www.threads.net/intent/post?text=${encodedText}`, '_blank', 'noopener,noreferrer,width=600,height=500');
+    } else if (platform === 'instagram') {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        navigator.clipboard.writeText(url);
+      }
+      setShareAlertMessage('Link copied to clipboard! Open Instagram to share in your Story or Bio.');
+      setTimeout(() => {
+        window.open('https://www.instagram.com', '_blank');
+      }, 1200);
+      setTimeout(() => setShareAlertMessage(''), 7000);
+    } else if (platform === 'tiktok') {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        navigator.clipboard.writeText(url);
+      }
+      setShareAlertMessage('Link copied to clipboard! Open TikTok to share in your video caption or bio.');
+      setTimeout(() => {
+        window.open('https://www.tiktok.com', '_blank');
+      }, 1200);
+      setTimeout(() => setShareAlertMessage(''), 7000);
+    } else if (platform === 'native') {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        navigator.share({
+          title: titleText,
+          text: `Daily Hukamnama Sri Darbar Sahib - ${dateFormatted}`,
+          url: url,
+        }).catch(() => {});
+      }
+    }
   };
 
   const handlePrint = () => {
@@ -252,7 +307,11 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
                           <div className="relative w-full flex items-center justify-center bg-stone-50">
                             <img
                               src={pageUrl}
-                              alt={`${hukamnama.title || "Daily Hukamnama Poster"} - Page ${pageNum}`}
+                              alt={
+                                hukamnama.image_alt
+                                  ? `${hukamnama.image_alt}${totalPages > 1 ? ` - Page ${pageNum}` : ''}`
+                                  : `${hukamnama.title || "Daily Hukamnama Poster"} - Page ${pageNum}`
+                              }
                               className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-[1.008]"
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 no-print">
@@ -381,14 +440,15 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
               <Printer className="w-4 h-4" />
             </button>
 
-            {/* WhatsApp Share */}
+            {/* Share Button (Multi-platform: WhatsApp, Facebook, X, Instagram, Threads, TikTok) */}
             <button
-              onClick={handleShare}
-              className="inline-flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white text-xs px-2.5 py-1.5 rounded-lg shadow-sm transition"
-              title="Share on WhatsApp"
+              type="button"
+              onClick={() => setShowShareModal(true)}
+              className="inline-flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white text-xs px-2.5 py-1.5 rounded-lg shadow-sm transition cursor-pointer"
+              title="Share Hukamnama on WhatsApp, Facebook, Instagram, X, Threads, TikTok"
             >
               <Share2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Share</span>
+              <span className="hidden sm:inline font-medium">Share</span>
             </button>
           </div>
         </div>
@@ -594,9 +654,207 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
               >
                 <img
                   src={currentSrc}
-                  alt={`${hukamnama.title} - Page ${currentIndex + 1}`}
+                  alt={
+                    hukamnama.image_alt
+                      ? `${hukamnama.image_alt}${posterPages.length > 1 ? ` - Page ${currentIndex + 1}` : ''}`
+                      : `${hukamnama.title} - Page ${currentIndex + 1}`
+                  }
                   className="max-h-[80vh] w-auto mx-auto object-contain rounded"
                 />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 🌸 MULTI-PLATFORM SOCIAL SHARE MODAL 🌸 */}
+      {showShareModal && (() => {
+        const { url } = getShareDetails();
+        const hasNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
+
+        return (
+          <div 
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={() => setShowShareModal(false)}
+          >
+            <div 
+              className="relative max-w-md w-full bg-white rounded-2xl shadow-2xl border border-gold-200 overflow-hidden animate-fadeIn"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Decorative Top Bar */}
+              <div className="h-2 bg-gradient-to-r from-gold-400 via-amber-500 to-gold-600" />
+
+              <div className="p-6 space-y-5">
+                {/* Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center text-gold-700">
+                      <Share2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 font-serif-heading">
+                        Share Daily Hukamnama
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        Sachkhand Sri Harmandir Sahib Amritsar {dateFormatted ? `• ${dateFormatted}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowShareModal(false)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Toast message if Instagram or TikTok clicked */}
+                {shareAlertMessage && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center space-x-2">
+                    <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <span>{shareAlertMessage}</span>
+                  </div>
+                )}
+
+                {/* Quick Copy Link Box */}
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                    Hukamnama Web Link
+                  </label>
+                  <div className="flex items-center rounded-xl bg-slate-50 border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-gold-500 focus-within:bg-white transition">
+                    <input
+                      type="text"
+                      readOnly
+                      value={url}
+                      className="w-full px-3 py-2 text-xs font-mono text-slate-700 bg-transparent outline-none select-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCopyShareUrl}
+                      className={`px-3.5 py-2 text-xs font-semibold flex items-center space-x-1.5 transition ${
+                        shareCopied
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-gold-500 hover:bg-gold-600 text-white'
+                      }`}
+                    >
+                      {shareCopied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Social Share Grid */}
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2.5">
+                    Share directly to social platforms
+                  </label>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {/* 1. WhatsApp */}
+                    <button
+                      type="button"
+                      onClick={() => handleSharePlatform('whatsapp')}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-emerald-50/80 hover:bg-emerald-100/80 border border-emerald-200/80 text-emerald-800 hover:scale-[1.02] transition shadow-xs group"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-sm mb-1.5 group-hover:scale-110 transition-transform">
+                        <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                          <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.669-.699c.969.53 1.771.82 2.791.82 3.182 0 5.769-2.587 5.769-5.766.001-3.182-2.585-5.766-5.769-5.766zm3.374 8.204c-.145.409-.844.757-1.189.789-.344.032-.782.148-2.502-.566-1.442-.598-2.389-2.046-2.46-2.142-.072-.096-.583-.775-.583-1.479 0-.703.367-1.05.498-1.193.13-.143.287-.179.383-.179.095 0 .191.002.274.006.088.005.206-.034.321.244.12.289.41 1.001.447 1.074.036.073.06.158.012.253-.048.096-.072.155-.143.239-.072.084-.15.187-.215.251-.072.072-.147.15-.063.294.084.144.373.615.8 1 .552.496 1.018.65 1.162.723.144.072.228.06.313-.036.084-.096.36-419.456-.563.096-.144.192-.12.324-.072.132.048.844.398.989.47.144.072.24.108.276.168.036.06.036.349-.109.758zM12.016 2.072c-5.518 0-9.997 4.478-9.997 9.997 0 1.763.459 3.486 1.332 5.006L2 22l5.068-1.328a9.96 9.96 0 0 0 4.948 1.303c5.518 0 9.997-4.479 9.997-9.998 0-5.519-4.479-9.997-9.997-9.997zm0 18.215c-1.579 0-3.118-.42-4.469-1.214l-.32-.189-3.32.871.886-3.234-.208-.33a8.18 8.18 0 0 1-1.258-4.326c0-4.526 3.682-8.208 8.209-8.208 4.527 0 8.209 3.682 8.209 8.208 0 4.527-3.682 8.209-8.209 8.209z"/>
+                        </svg>
+                      </div>
+                      <span className="text-xs font-bold">WhatsApp</span>
+                    </button>
+
+                    {/* 2. Facebook */}
+                    <button
+                      type="button"
+                      onClick={() => handleSharePlatform('facebook')}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200/80 text-blue-800 hover:scale-[1.02] transition shadow-xs group"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-[#1877F2] text-white flex items-center justify-center shadow-sm mb-1.5 group-hover:scale-110 transition-transform">
+                        <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        </svg>
+                      </div>
+                      <span className="text-xs font-bold">Facebook</span>
+                    </button>
+
+                    {/* 3. X (Twitter) */}
+                    <button
+                      type="button"
+                      onClick={() => handleSharePlatform('twitter')}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 hover:scale-[1.02] transition shadow-xs group"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center shadow-sm mb-1.5 group-hover:scale-110 transition-transform">
+                        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                      </div>
+                      <span className="text-xs font-bold">X (Twitter)</span>
+                    </button>
+
+                    {/* 4. Threads */}
+                    <button
+                      type="button"
+                      onClick={() => handleSharePlatform('threads')}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 hover:scale-[1.02] transition shadow-xs group"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-[#101010] text-white flex items-center justify-center shadow-sm mb-1.5 group-hover:scale-110 transition-transform">
+                        <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
+                          <path d="M12.186 24C5.467 24 0 18.533 0 11.814 0 5.094 5.467 0 12.186 0c6.643 0 11.966 5.253 12.18 11.888h-2.585c-.21-5.21-4.42-9.303-9.595-9.303-5.293 0-9.6 4.307-9.6 9.6s4.307 9.6 9.6 9.6c3.42 0 6.435-1.794 8.118-4.496l2.167 1.442C20.177 22.04 16.42 24 12.186 24zm4.279-10.74a4.343 4.343 0 0 0-4.32-3.79c-2.398 0-4.349 1.951-4.349 4.349 0 2.398 1.951 4.349 4.349 4.349 1.737 0 3.242-1.026 3.929-2.502l2.36.944a6.93 6.93 0 0 1-6.289 4.143c-3.832 0-6.934-3.102-6.934-6.934 0-3.832 3.102-6.934 6.934-6.934 3.738 0 6.786 2.95 6.924 6.657l-.004.091a9.23 9.23 0 0 1-.225 2.126l-2.45-.694c.05-.445.076-.902.076-1.371l-.024-.268z"/>
+                        </svg>
+                      </div>
+                      <span className="text-xs font-bold">Threads</span>
+                    </button>
+
+                    {/* 5. Instagram */}
+                    <button
+                      type="button"
+                      onClick={() => handleSharePlatform('instagram')}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-pink-50/80 hover:bg-pink-100/80 border border-pink-200/80 text-pink-900 hover:scale-[1.02] transition shadow-xs group"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white flex items-center justify-center shadow-sm mb-1.5 group-hover:scale-110 transition-transform">
+                        <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
+                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                        </svg>
+                      </div>
+                      <span className="text-xs font-bold">Instagram</span>
+                    </button>
+
+                    {/* 6. TikTok */}
+                    <button
+                      type="button"
+                      onClick={() => handleSharePlatform('tiktok')}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 hover:scale-[1.02] transition shadow-xs group"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center shadow-sm mb-1.5 group-hover:scale-110 transition-transform">
+                        <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
+                          <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.298-.002.595.042.88.13V9.4a6.33 6.33 0 0 0-1-.08A6.34 6.34 0 0 0 3 15.66a6.34 6.34 0 0 0 10.82 4.49 6.27 6.27 0 0 0 1.88-4.49V8.65a8.28 8.28 0 0 0 4.89 1.58V6.8a4.87 4.87 0 0 1-1-.11z"/>
+                        </svg>
+                      </div>
+                      <span className="text-xs font-bold">TikTok</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Device Native Share option if available */}
+                {hasNativeShare && (
+                  <button
+                    type="button"
+                    onClick={() => handleSharePlatform('native')}
+                    className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>More Sharing Options (Device System Share)</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
