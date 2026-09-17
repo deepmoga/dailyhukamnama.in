@@ -429,8 +429,8 @@ export default function PageForm({ initialData = {}, isEdit = false }) {
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Description & Body Content (Rich Text Editor)
               </label>
-              <span className="text-[11px] text-gold-600 font-medium">
-                Free Editor • Direct Image Upload Enabled
+              <span className="text-[11px] text-gold-600 font-medium hidden sm:inline-block">
+                Tip: Click any image to wrap text (Left/Right) or resize
               </span>
             </div>
 

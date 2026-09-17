@@ -210,6 +210,79 @@ body {
   text-decoration: line-through !important;
 }
 
+/* Text Justify Alignment */
+.rich-text-content [style*="text-align: justify"],
+.rich-text-content [align="justify"],
+.rich-text-content .text-justify,
+.prose [style*="text-align: justify"],
+.prose [align="justify"] {
+  text-align: justify !important;
+  text-justify: inter-word !important;
+}
+
+/* Image Wrapping & Alignment in Editor and Public Pages */
+.rich-text-content img.align-left,
+.rich-text-content img[data-align="left"],
+.prose img.align-left {
+  float: left !important;
+  margin: 0.5rem 1.5rem 1rem 0 !important;
+  max-width: 50% !important;
+  display: inline-block !important;
+  height: auto !important;
+}
+
+.rich-text-content img.align-right,
+.rich-text-content img[data-align="right"],
+.prose img.align-right {
+  float: right !important;
+  margin: 0.5rem 0 1rem 1.5rem !important;
+  max-width: 50% !important;
+  display: inline-block !important;
+  height: auto !important;
+}
+
+.rich-text-content img.align-center,
+.rich-text-content img[data-align="center"],
+.prose img.align-center {
+  display: block !important;
+  margin: 1.5rem auto !important;
+  float: none !important;
+  clear: both !important;
+  height: auto !important;
+}
+
+.rich-text-content img.align-full,
+.rich-text-content img[data-align="full"],
+.prose img.align-full {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 1.5rem 0 !important;
+  float: none !important;
+  clear: both !important;
+  height: auto !important;
+}
+
+/* Clearfix for paragraphs wrapping floated images */
+.rich-text-content::after,
+.prose::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Selected Image in Editor */
+.rich-text-content img.selected-editor-img {
+  outline: 3px solid #f59e0b !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.rich-text-content img {
+  cursor: pointer;
+  transition: outline 0.15s ease-in-out;
+}
+
 /* ========================================================= */
 /* GLOBAL CONTAINER WIDTH CONFIGURATION (85% on Desktop)     */
 /* ========================================================= */

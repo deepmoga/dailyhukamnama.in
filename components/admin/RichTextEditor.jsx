@@ -4,21 +4,26 @@ import { useState, useRef, useEffect } from 'react';
 import { 
   Bold, Italic, Underline, Strikethrough, 
   List, ListOrdered, Quote, 
-  AlignLeft, AlignCenter, AlignRight, 
+  AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Link as LinkIcon, Image as ImageIcon, 
-  Code, Eye, Upload, Loader2, Undo, Redo
+  Code, Eye, Upload, Loader2, Undo, Redo,
+  Trash2, X
 } from 'lucide-react';
 
 export default function RichTextEditor({ value = '', onChange, placeholder = 'Start typing page description...' }) {
+  const containerRef = useRef(null);
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
   const savedSelectionRef = useRef(null);
+  const selectedImgRef = useRef(null);
+
   const [isHtmlMode, setIsHtmlMode] = useState(false);
   const [rawHtml, setRawHtml] = useState(value);
   const [uploading, setUploading] = useState(false);
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [modalType, setModalType] = useState('link'); // 'link' or 'image'
+  const [selectedImgData, setSelectedImgData] = useState(null);
 
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
@@ -35,12 +40,26 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
     ul: false,
     ol: false,
     quote: false,
+    alignLeft: false,
+    alignCenter: false,
+    alignRight: false,
+    justify: false,
   });
+
+  // Get clean HTML without temporary editor selection classes
+  const getCleanHtml = () => {
+    if (!editorRef.current) return '';
+    const clone = editorRef.current.cloneNode(true);
+    const selectedImgs = clone.querySelectorAll('.selected-editor-img');
+    selectedImgs.forEach((img) => img.classList.remove('selected-editor-img'));
+    return clone.innerHTML;
+  };
 
   // Initialize editor content
   useEffect(() => {
     if (editorRef.current && !isHtmlMode) {
-      if (editorRef.current.innerHTML !== value) {
+      const cleanHtml = getCleanHtml();
+      if (cleanHtml !== (value || '')) {
         editorRef.current.innerHTML = value || '';
       }
     }
@@ -56,9 +75,9 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
 
   const handleInput = () => {
     if (editorRef.current) {
-      const html = editorRef.current.innerHTML;
-      setRawHtml(html);
-      if (onChange) onChange(html);
+      const cleanHtml = getCleanHtml();
+      setRawHtml(cleanHtml);
+      if (onChange) onChange(cleanHtml);
     }
   };
 
@@ -92,6 +111,10 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
       const isStrike = document.queryCommandState('strikeThrough');
       const isUl = document.queryCommandState('insertUnorderedList');
       const isOl = document.queryCommandState('insertOrderedList');
+      const isAlignLeft = document.queryCommandState('justifyLeft');
+      const isAlignCenter = document.queryCommandState('justifyCenter');
+      const isAlignRight = document.queryCommandState('justifyRight');
+      const isJustify = document.queryCommandState('justifyFull');
 
       let currentBlock = '';
       const selection = window.getSelection();
@@ -124,6 +147,10 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
         ul: isUl,
         ol: isOl,
         quote: currentBlock === 'blockquote',
+        alignLeft: isAlignLeft,
+        alignCenter: isAlignCenter,
+        alignRight: isAlignRight,
+        justify: isJustify,
       });
     } catch (e) {}
   };
@@ -196,6 +223,196 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
     updateActiveFormats();
   };
 
+  // Deselect currently selected image
+  const deselectImage = () => {
+    if (selectedImgRef.current) {
+      selectedImgRef.current.classList.remove('selected-editor-img');
+      selectedImgRef.current = null;
+    }
+    setSelectedImgData(null);
+  };
+
+  // If image was placed in a wrapper div or single-child p, unwrap it to allow natural text wrapping
+  const unwrapImageIfInWrapper = (img) => {
+    if (!img || !img.parentElement) return;
+    const parent = img.parentElement;
+    if (parent !== editorRef.current && (parent.tagName === 'DIV' || parent.tagName === 'P')) {
+      const clone = parent.cloneNode(true);
+      const imgInClone = clone.querySelector('img');
+      if (imgInClone) imgInClone.remove();
+      if (clone.textContent.trim() === '') {
+        parent.replaceWith(img);
+      }
+    }
+  };
+
+  // Editor Click handler - detect click on <img> vs text
+  const handleEditorClick = (e) => {
+    const target = e.target;
+    if (target && target.tagName === 'IMG') {
+      if (selectedImgRef.current && selectedImgRef.current !== target) {
+        selectedImgRef.current.classList.remove('selected-editor-img');
+      }
+      selectedImgRef.current = target;
+      target.classList.add('selected-editor-img');
+
+      // Determine current alignment
+      let currentAlign = 'center';
+      if (
+        target.classList.contains('align-left') ||
+        target.style.float === 'left' ||
+        target.getAttribute('data-align') === 'left'
+      ) {
+        currentAlign = 'left';
+      } else if (
+        target.classList.contains('align-right') ||
+        target.style.float === 'right' ||
+        target.getAttribute('data-align') === 'right'
+      ) {
+        currentAlign = 'right';
+      } else if (
+        target.classList.contains('align-full') ||
+        target.getAttribute('data-align') === 'full'
+      ) {
+        currentAlign = 'full';
+      }
+
+      // Determine current width
+      let currentWidth = target.style.width || target.getAttribute('width') || '';
+      if (!currentWidth) {
+        if (currentAlign === 'full') currentWidth = '100%';
+        else if (currentAlign === 'left' || currentAlign === 'right') currentWidth = '45%';
+        else currentWidth = 'auto';
+      }
+
+      setSelectedImgData({
+        src: target.src,
+        alt: target.alt || '',
+        align: currentAlign,
+        width: currentWidth,
+      });
+    } else {
+      deselectImage();
+    }
+  };
+
+  // Image Alignment & Text Wrap
+  const setImageAlignment = (alignType) => {
+    const img = selectedImgRef.current;
+    if (!img) return;
+
+    unwrapImageIfInWrapper(img);
+
+    img.classList.remove('align-left', 'align-right', 'align-center', 'align-full');
+    img.removeAttribute('data-align');
+
+    if (alignType === 'left') {
+      img.classList.add('align-left');
+      img.setAttribute('data-align', 'left');
+      img.style.float = 'left';
+      img.style.margin = '0.5rem 1.5rem 1rem 0';
+      img.style.display = 'inline-block';
+      img.style.clear = 'none';
+      if (!img.style.width || img.style.width === '100%') {
+        img.style.width = '45%';
+        img.style.maxWidth = '45%';
+      }
+    } else if (alignType === 'right') {
+      img.classList.add('align-right');
+      img.setAttribute('data-align', 'right');
+      img.style.float = 'right';
+      img.style.margin = '0.5rem 0 1rem 1.5rem';
+      img.style.display = 'inline-block';
+      img.style.clear = 'none';
+      if (!img.style.width || img.style.width === '100%') {
+        img.style.width = '45%';
+        img.style.maxWidth = '45%';
+      }
+    } else if (alignType === 'center') {
+      img.classList.add('align-center');
+      img.setAttribute('data-align', 'center');
+      img.style.float = 'none';
+      img.style.margin = '1.5rem auto';
+      img.style.display = 'block';
+      img.style.clear = 'both';
+      img.style.maxWidth = '100%';
+    } else if (alignType === 'full') {
+      img.classList.add('align-full');
+      img.setAttribute('data-align', 'full');
+      img.style.float = 'none';
+      img.style.margin = '1.5rem 0';
+      img.style.display = 'block';
+      img.style.clear = 'both';
+      img.style.width = '100%';
+      img.style.maxWidth = '100%';
+    }
+
+    setSelectedImgData((prev) =>
+      prev
+        ? {
+            ...prev,
+            align: alignType,
+            width: img.style.width || 'auto',
+          }
+        : null
+    );
+
+    handleInput();
+  };
+
+  // Image Width Preset
+  const setImageWidth = (widthVal) => {
+    const img = selectedImgRef.current;
+    if (!img) return;
+
+    if (widthVal === 'auto') {
+      img.style.width = 'auto';
+      img.style.maxWidth = '100%';
+    } else {
+      img.style.width = widthVal;
+      img.style.maxWidth = widthVal;
+    }
+
+    setSelectedImgData((prev) => (prev ? { ...prev, width: widthVal } : null));
+    handleInput();
+  };
+
+  // Image Alt text for SEO
+  const setImageAlt = (newAlt) => {
+    const img = selectedImgRef.current;
+    if (!img) return;
+    img.alt = newAlt;
+    setSelectedImgData((prev) => (prev ? { ...prev, alt: newAlt } : null));
+    handleInput();
+  };
+
+  // Delete Image
+  const deleteSelectedImage = () => {
+    const img = selectedImgRef.current;
+    if (!img) return;
+
+    const parent = img.parentElement;
+    img.remove();
+    if (parent && parent !== editorRef.current && parent.innerHTML.trim() === '') {
+      parent.remove();
+    }
+
+    selectedImgRef.current = null;
+    setSelectedImgData(null);
+    handleInput();
+  };
+
+  // Outside click listener to deselect image when clicking away
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        deselectImage();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Image Upload handler
   const handleImageFile = async (e) => {
     const file = e.target.files?.[0];
@@ -203,6 +420,7 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
 
     try {
       setUploading(true);
+      deselectImage();
       const formData = new FormData();
       formData.append('file', file);
 
@@ -216,8 +434,12 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
         throw new Error(data.error || 'Failed to upload image');
       }
 
-      // Insert uploaded image into editor
-      execCommand('insertHTML', `<div class="my-4"><img src="${data.url}" alt="${file.name}" class="max-w-full h-auto rounded-lg shadow border border-slate-200" /></div><p><br/></p>`);
+      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      // Insert uploaded image into editor with default centered display
+      execCommand(
+        'insertHTML',
+        `<img src="${data.url}" alt="${cleanName}" class="align-center rounded-lg shadow border border-slate-200" style="display: block; margin: 1.5rem auto; max-width: 100%; height: auto;" /><p><br/></p>`
+      );
     } catch (err) {
       alert('Image upload failed: ' + err.message);
     } finally {
@@ -235,7 +457,11 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
     if (modalType === 'link') {
       execCommand('createLink', urlInput.trim());
     } else if (modalType === 'image') {
-      execCommand('insertHTML', `<div class="my-4"><img src="${urlInput.trim()}" alt="Image" class="max-w-full h-auto rounded-lg shadow border border-slate-200" /></div><p><br/></p>`);
+      deselectImage();
+      execCommand(
+        'insertHTML',
+        `<img src="${urlInput.trim()}" alt="Image" class="align-center rounded-lg shadow border border-slate-200" style="display: block; margin: 1.5rem auto; max-width: 100%; height: auto;" /><p><br/></p>`
+      );
     }
 
     setUrlInput('');
@@ -243,7 +469,7 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
   };
 
   return (
-    <div className="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-sm focus-within:border-gold-500 transition">
+    <div ref={containerRef} className="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-sm focus-within:border-gold-500 transition">
       {/* Hidden file input for image upload */}
       <input 
         type="file" 
@@ -253,7 +479,7 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
         className="hidden" 
       />
 
-      {/* Editor Toolbar */}
+      {/* Editor Main Toolbar */}
       <div className="bg-slate-50 border-b border-slate-200 px-3 py-2 flex flex-wrap items-center gap-1 text-slate-700 select-none">
         <button
           type="button"
@@ -476,7 +702,11 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => execCommand('justifyLeft')}
           title="Align Left"
-          className="p-1.5 hover:bg-slate-200 rounded text-slate-700 hover:text-slate-900 transition"
+          className={`p-1.5 rounded transition ${
+            activeFormats.alignLeft
+              ? 'bg-gold-500 text-white shadow-xs'
+              : 'hover:bg-slate-200 text-slate-700 hover:text-slate-900'
+          }`}
         >
           <AlignLeft className="w-4 h-4" />
         </button>
@@ -485,7 +715,11 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => execCommand('justifyCenter')}
           title="Align Center"
-          className="p-1.5 hover:bg-slate-200 rounded text-slate-700 hover:text-slate-900 transition"
+          className={`p-1.5 rounded transition ${
+            activeFormats.alignCenter
+              ? 'bg-gold-500 text-white shadow-xs'
+              : 'hover:bg-slate-200 text-slate-700 hover:text-slate-900'
+          }`}
         >
           <AlignCenter className="w-4 h-4" />
         </button>
@@ -494,9 +728,26 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => execCommand('justifyRight')}
           title="Align Right"
-          className="p-1.5 hover:bg-slate-200 rounded text-slate-700 hover:text-slate-900 transition"
+          className={`p-1.5 rounded transition ${
+            activeFormats.alignRight
+              ? 'bg-gold-500 text-white shadow-xs'
+              : 'hover:bg-slate-200 text-slate-700 hover:text-slate-900'
+          }`}
         >
           <AlignRight className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => execCommand('justifyFull')}
+          title="Justify Text (Align Both Left & Right)"
+          className={`p-1.5 rounded transition ${
+            activeFormats.justify
+              ? 'bg-gold-500 text-white shadow-xs'
+              : 'hover:bg-slate-200 text-slate-700 hover:text-slate-900'
+          }`}
+        >
+          <AlignJustify className="w-4 h-4" />
         </button>
 
         <span className="w-px h-5 bg-slate-300 mx-1" />
@@ -554,8 +805,11 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
         <div className="ml-auto flex items-center space-x-1">
           <button
             type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setIsHtmlMode(!isHtmlMode)}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              deselectImage();
+              setIsHtmlMode(!isHtmlMode);
+            }}
             title={isHtmlMode ? 'Switch to Visual Editor' : 'Switch to HTML Code Mode'}
             className={`inline-flex items-center space-x-1 px-2 py-1 rounded text-xs font-medium transition ${
               isHtmlMode 
@@ -568,6 +822,134 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
           </button>
         </div>
       </div>
+
+      {/* Selected Image Options Toolbar */}
+      {selectedImgData && !isHtmlMode && (
+        <div className="bg-amber-50/95 border-b border-amber-200 px-3 py-2 flex flex-wrap items-center gap-2 text-xs text-amber-950 animate-fadeIn transition">
+          <div className="flex items-center space-x-1 font-semibold text-amber-900 mr-1">
+            <ImageIcon className="w-3.5 h-3.5 text-amber-600" />
+            <span>Image Options:</span>
+          </div>
+
+          {/* Alignment / Wrap buttons */}
+          <div className="flex items-center space-x-0.5 bg-white p-0.5 rounded-lg border border-amber-200 shadow-2xs">
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setImageAlignment('left')}
+              title="Wrap Left (Float Left, text wraps around image)"
+              className={`px-2 py-1 rounded font-medium transition flex items-center space-x-1 ${
+                selectedImgData.align === 'left'
+                  ? 'bg-gold-500 text-white font-bold shadow-xs'
+                  : 'hover:bg-amber-100 text-slate-700'
+              }`}
+            >
+              <span>⬅️ Wrap Left</span>
+            </button>
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setImageAlignment('center')}
+              title="Center (Centered block, text above & below)"
+              className={`px-2 py-1 rounded font-medium transition flex items-center space-x-1 ${
+                selectedImgData.align === 'center'
+                  ? 'bg-gold-500 text-white font-bold shadow-xs'
+                  : 'hover:bg-amber-100 text-slate-700'
+              }`}
+            >
+              <span>⏺️ Center</span>
+            </button>
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setImageAlignment('right')}
+              title="Wrap Right (Float Right, text wraps around image)"
+              className={`px-2 py-1 rounded font-medium transition flex items-center space-x-1 ${
+                selectedImgData.align === 'right'
+                  ? 'bg-gold-500 text-white font-bold shadow-xs'
+                  : 'hover:bg-amber-100 text-slate-700'
+              }`}
+            >
+              <span>➡️ Wrap Right</span>
+            </button>
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setImageAlignment('full')}
+              title="Full Width (100% width)"
+              className={`px-2 py-1 rounded font-medium transition flex items-center space-x-1 ${
+                selectedImgData.align === 'full'
+                  ? 'bg-gold-500 text-white font-bold shadow-xs'
+                  : 'hover:bg-amber-100 text-slate-700'
+              }`}
+            >
+              <span>↔️ Full Width</span>
+            </button>
+          </div>
+
+          <span className="w-px h-5 bg-amber-200 mx-0.5" />
+
+          {/* Width Presets */}
+          <div className="flex items-center space-x-1">
+            <span className="text-[11px] text-amber-800 font-medium">Width:</span>
+            {['25%', '33%', '50%', '75%', '100%', 'auto'].map((sz) => (
+              <button
+                key={sz}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setImageWidth(sz)}
+                className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition border ${
+                  selectedImgData.width === sz
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-2xs font-semibold'
+                    : 'bg-white text-slate-700 border-amber-200 hover:bg-amber-100'
+                }`}
+              >
+                {sz === 'auto' ? 'Auto' : sz}
+              </button>
+            ))}
+          </div>
+
+          <span className="w-px h-5 bg-amber-200 mx-0.5" />
+
+          {/* Alt text for SEO */}
+          <div className="flex items-center space-x-1">
+            <span className="text-[11px] text-amber-800 font-medium">Alt:</span>
+            <input
+              type="text"
+              value={selectedImgData.alt}
+              onChange={(e) => setImageAlt(e.target.value)}
+              placeholder="SEO alt text..."
+              className="w-32 sm:w-44 px-2 py-0.5 bg-white border border-amber-300 rounded text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+
+          {/* Delete Image */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={deleteSelectedImage}
+            title="Delete Image"
+            className="ml-auto inline-flex items-center space-x-1 px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded font-medium transition text-xs"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Remove</span>
+          </button>
+
+          {/* Close toolbar */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={deselectImage}
+            title="Deselect Image"
+            className="p-1 text-slate-400 hover:text-slate-700 hover:bg-amber-200/50 rounded transition"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Editor Content Box */}
       {isHtmlMode ? (
@@ -582,6 +964,7 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
         <div
           ref={editorRef}
           contentEditable
+          onClick={handleEditorClick}
           onInput={handleInput}
           onBlur={handleInput}
           onKeyUp={updateActiveFormats}
