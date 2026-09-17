@@ -10,8 +10,9 @@ ssh.connect('62.84.184.96', username='root', password='gDdsK5j9EGN8yyHlg1I12r1AD
 
 script = """
 import('./lib/db.js').then(async m => {
-  const s = await m.query('SELECT * FROM site_settings');
-  console.log('SITE_SETTINGS:', JSON.stringify(s, null, 2));
+  const r = await m.query("SELECT id, title, slug, punjabi_title, page_type, show_in_menu, sort_order FROM pages WHERE page_type='path' ORDER BY sort_order ASC, id ASC");
+  console.log('PATHS_COUNT:', r.length);
+  console.log('PATHS_IN_DB:', JSON.stringify(r, null, 2));
   process.exit(0);
 }).catch(e => {
   console.error(e);
@@ -26,7 +27,4 @@ sftp.close()
 
 stdin, stdout, stderr = ssh.exec_command("cd /home/demo.dailyhukamnama.in/app && node --env-file=.env.local vps_query.mjs")
 print(stdout.read().decode('utf-8', errors='ignore'))
-
-stdin, stdout, stderr = ssh.exec_command("ls -la /home/demo.dailyhukamnama.in/app/public/uploads/2026/09/")
-print("UPLOADS:\n", stdout.read().decode('utf-8', errors='ignore'))
 ssh.close()

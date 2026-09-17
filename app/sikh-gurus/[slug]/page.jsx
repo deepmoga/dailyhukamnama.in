@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { sikhGurusData } from '@/lib/gurus-data';
 import pool from '@/lib/db';
-import { Sparkles, MapPin, Calendar, BookOpen, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { ChevronLeft, ExternalLink } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -19,26 +19,47 @@ async function getGuru(slug) {
     if (rows.length > 0) {
       const row = rows[0];
       const staticData = sikhGurusData.find((g) => g.slug === cleanSlug || (cleanSlug === 'guru-granth-sahib-ji' && g.slug === 'sri-guru-granth-sahib-ji')) || {};
+      
+      let relatedButtons = [];
+      if (row.related_buttons) {
+        try {
+          relatedButtons = typeof row.related_buttons === 'string'
+            ? JSON.parse(row.related_buttons)
+            : row.related_buttons;
+        } catch (e) {
+          relatedButtons = [];
+        }
+      }
+      if (!Array.isArray(relatedButtons)) relatedButtons = [];
+      relatedButtons = relatedButtons.filter((b) => b && b.name && b.link);
+
       return {
         id: row.sort_order || staticData.id || 1,
         name: row.title,
         punjabiName: row.punjabi_title || staticData.punjabiName || '',
         dates: row.author || staticData.dates || '',
-        guruship: staticData.guruship || row.author || '',
-        birthPlace: staticData.birthPlace || '',
-        jotiJotPlace: staticData.jotiJotPlace || '',
-        baniCount: staticData.baniCount || '',
         summary: row.meta_desc || staticData.summary || '',
-        coreTeachings: staticData.coreTeachings || [],
         biography: row.content || staticData.biography || '',
-        isHtmlContent: !!row.content,
-        majorBanis: staticData.majorBanis || [],
+        relatedButtons,
       };
     }
   } catch (e) {
     console.error('Error fetching guru from DB:', e);
   }
-  return sikhGurusData.find((g) => g.slug === slug || (slug === 'guru-granth-sahib-ji' && g.slug === 'sri-guru-granth-sahib-ji'));
+
+  const staticData = sikhGurusData.find((g) => g.slug === slug || (slug === 'guru-granth-sahib-ji' && g.slug === 'sri-guru-granth-sahib-ji'));
+  if (staticData) {
+    return {
+      id: staticData.id,
+      name: staticData.name,
+      punjabiName: staticData.punjabiName,
+      dates: staticData.dates,
+      summary: staticData.summary,
+      biography: staticData.biography,
+      relatedButtons: [],
+    };
+  }
+  return null;
 }
 
 export async function generateMetadata({ params }) {
@@ -77,70 +98,45 @@ export default async function GuruDetailPage({ params }) {
               <span className="text-xs font-bold text-gold-400 bg-gold-500/20 px-3 py-1 rounded-full border border-gold-400/30">
                 {guru.id === 11 ? 'Eternal Guru' : `Guru #${guru.id}`}
               </span>
-              <span className="text-xs text-slate-300 font-mono">
-                {guru.dates}
-              </span>
+              {guru.dates && (
+                <span className="text-xs text-slate-300 font-mono">
+                  {guru.dates}
+                </span>
+              )}
             </div>
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold font-serif-heading">
               {guru.name}
             </h1>
-            <p className="font-gurmukhi text-2xl font-bold text-gold-300">
-              {guru.punjabiName}
-            </p>
+            {guru.punjabiName && (
+              <p className="font-gurmukhi text-2xl font-bold text-gold-300">
+                {guru.punjabiName}
+              </p>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-        {/* Quick Facts Card */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gold-200 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <div>
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Guruship</span>
-            <p className="text-sm font-bold text-slate-800 mt-0.5">{guru.guruship}</p>
-          </div>
-          <div>
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Birthplace</span>
-            <p className="text-sm font-bold text-slate-800 mt-0.5">{guru.birthPlace}</p>
-          </div>
-          <div>
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Joti Jot Place</span>
-            <p className="text-sm font-bold text-slate-800 mt-0.5">{guru.jotiJotPlace}</p>
-          </div>
-          <div className="sm:col-span-2 md:col-span-3 pt-2 border-t border-slate-100">
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Bani in Sri Guru Granth Sahib</span>
-            <p className="text-sm font-bold text-gold-700 mt-0.5">{guru.baniCount}</p>
-          </div>
-        </div>
-
-        {/* Core Teachings */}
-        <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gold-200 space-y-4">
-          <div className="flex items-center space-x-2 border-b border-gold-100 pb-3">
-            <Sparkles className="w-5 h-5 text-gold-600" />
-            <h2 className="text-xl font-bold text-slate-900 font-serif-heading">
-              Core Teachings & Contributions
-            </h2>
-          </div>
-          <ul className="space-y-3">
-            {guru.coreTeachings.map((teaching, idx) => (
-              <li key={idx} className="flex items-start space-x-3 text-slate-700 text-sm">
-                <CheckCircle2 className="w-5 h-5 text-gold-500 flex-shrink-0 mt-0.5" />
-                <span className="font-medium">{teaching}</span>
-              </li>
+      {/* Main Content: Backend Description */}
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+        {/* Related language buttons if any */}
+        {guru.relatedButtons && guru.relatedButtons.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2.5">
+            {guru.relatedButtons.map((btn, idx) => (
+              <Link
+                key={idx}
+                href={btn.link}
+                className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-gold-300 text-gold-800 hover:bg-gold-50 shadow-xs transition"
+              >
+                <span>{btn.name}</span>
+                <ExternalLink className="w-3 h-3 text-gold-500" />
+              </Link>
             ))}
-          </ul>
-        </div>
-
-        {/* Full Biography */}
-        <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gold-200 space-y-4">
-          <div className="flex items-center space-x-2 border-b border-gold-100 pb-3">
-            <BookOpen className="w-5 h-5 text-gold-600" />
-            <h2 className="text-xl font-bold text-slate-900 font-serif-heading">
-              Life History & Divine Mission
-            </h2>
           </div>
-          {guru.biography.includes('<') ? (
+        )}
+
+        <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-gold-200">
+          {guru.biography && guru.biography.includes('<') ? (
             <div 
               className="rich-text-content prose prose-slate max-w-none 
                 prose-headings:font-serif-heading prose-headings:text-slate-900 
@@ -158,22 +154,6 @@ export default async function GuruDetailPage({ params }) {
             </div>
           )}
         </div>
-
-        {/* Major Banis / Compositions */}
-        {guru.majorBanis && guru.majorBanis.length > 0 && (
-          <div className="bg-gradient-to-r from-gold-50 via-white to-amber-50 rounded-2xl p-6 border border-gold-200 space-y-3">
-            <h3 className="text-base font-bold text-slate-900 font-serif-heading">
-              Major Sacred Banis & Milestones
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {guru.majorBanis.map((b, idx) => (
-                <span key={idx} className="bg-white border border-gold-300 text-gold-800 text-xs font-semibold px-3 py-1.5 rounded-xl shadow-sm">
-                  {b}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </main>
 
       <Footer />

@@ -455,7 +455,10 @@ export default function Header() {
 
       {/* 4. MOBILE DRAWER MENU */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-gold-200 px-4 pt-3 pb-6 space-y-2 shadow-lg animate-fadeIn">
+        <div 
+          className="lg:hidden bg-white border-b border-gold-200 px-4 pt-3 pb-16 space-y-2 shadow-2xl animate-fadeIn max-h-[calc(100dvh-80px)] overflow-y-auto overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           <Link 
             href="/" 
             onClick={() => setMobileMenuOpen(false)}
