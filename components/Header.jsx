@@ -29,6 +29,7 @@ export default function Header() {
   const [dbPaths, setDbPaths] = useState([]);
   const [dbGurus, setDbGurus] = useState([]);
   const [siteLogo, setSiteLogo] = useState('/logo.png');
+  const [siteLogoAlt, setSiteLogoAlt] = useState('Daily Hukamnama Logo');
 
   const aboutLinks = [
     {
@@ -90,6 +91,9 @@ export default function Header() {
         const sData = await sRes.json();
         if (sData.settings?.site_logo) {
           setSiteLogo(sData.settings.site_logo);
+        }
+        if (sData.settings?.site_logo_alt) {
+          setSiteLogoAlt(sData.settings.site_logo_alt);
         }
       } catch (err) {
         // fallback to default
@@ -193,7 +197,7 @@ export default function Header() {
               <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 transition-transform group-hover:scale-105">
                 <img 
                   src={siteLogo || "/logo.png"} 
-                  alt="Daily Hukamnama Logo" 
+                  alt={siteLogoAlt || "Daily Hukamnama Logo"} 
                   className="w-full h-full object-contain"
                 />
               </div>

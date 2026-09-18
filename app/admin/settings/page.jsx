@@ -30,7 +30,9 @@ export default function AdminSettingsPage() {
     recaptcha_secret_key: '',
     recaptcha_enabled: '0',
     site_logo: '/logo.png',
+    site_logo_alt: '',
     footer_logo: '/logo.png',
+    footer_logo_alt: '',
     favicon: '/logo.png',
     site_title: 'Daily Hukamnama',
     site_meta_title: '',
@@ -564,6 +566,20 @@ export default function AdminSettingsPage() {
                     placeholder="/logo.png"
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono outline-none"
                   />
+
+                  <div className="mt-2.5">
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Header Logo Alt Tag (Image SEO)
+                    </label>
+                    <input
+                      type="text"
+                      name="site_logo_alt"
+                      value={formData.site_logo_alt || ''}
+                      onChange={handleChange}
+                      placeholder="e.g. Daily Hukamnama Sri Harmandir Sahib Amritsar"
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs outline-none focus:ring-1 focus:ring-gold-500"
+                    />
+                  </div>
                 </div>
 
                 <button
@@ -609,6 +625,20 @@ export default function AdminSettingsPage() {
                     placeholder="/logo.png"
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono outline-none"
                   />
+
+                  <div className="mt-2.5">
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Footer Logo Alt Tag (Image SEO)
+                    </label>
+                    <input
+                      type="text"
+                      name="footer_logo_alt"
+                      value={formData.footer_logo_alt || ''}
+                      onChange={handleChange}
+                      placeholder="e.g. Daily Hukamnama Sri Harmandir Sahib Amritsar"
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs outline-none focus:ring-1 focus:ring-gold-500"
+                    />
+                  </div>
                 </div>
 
                 <button

@@ -58,6 +58,31 @@ async function setup() {
     // column already exists
   }
 
+  // Ensure contact-us page exists in pages table for editing in Standard Pages
+  try {
+    const [existingContact] = await conn.query('SELECT id FROM pages WHERE slug = ?', ['contact-us']);
+    if (!existingContact || existingContact.length === 0) {
+      await conn.query(
+        `INSERT INTO pages (title, slug, content, meta_title, meta_desc, meta_keywords, page_type, show_in_menu, sort_order) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          'Contact Us',
+          'contact-us',
+          `<h2>Get in Touch with Daily Hukamnama Seva</h2><p>We welcome your feedback, inquiries, and suggestions regarding our Daily Hukamnama updates, Nitnem paths, mobile applications, and Gurbani resources.</p><p>If you have any questions or would like to contribute towards our digital seva, please feel free to reach out to our seva team.</p><p><strong>Email:</strong> info@dailyhukamnama.in<br/><strong>Official Seva:</strong> Sachkhand Sri Harmandir Sahib (Golden Temple), Amritsar</p>`,
+          'Contact Us | Daily Hukamnama Seva',
+          'Get in touch with the Daily Hukamnama Seva team. We welcome your feedback, suggestions, and inquiries.',
+          'contact us, daily hukamnama contact, golden temple hukamnama seva, amritsar',
+          'page',
+          1,
+          99,
+        ]
+      );
+      console.log('Contact Us page seeded into pages table');
+    }
+  } catch (err) {
+    console.warn('Contact us seed notice:', err.message);
+  }
+
   // Ensure hukamnamas SEO columns exist
   try {
     await conn.query(`ALTER TABLE hukamnamas ADD COLUMN meta_desc TEXT NULL AFTER source_image;`);

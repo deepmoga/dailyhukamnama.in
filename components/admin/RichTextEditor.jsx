@@ -22,8 +22,12 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
   const [uploading, setUploading] = useState(false);
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+  const [urlAltInput, setUrlAltInput] = useState('');
   const [modalType, setModalType] = useState('link'); // 'link' or 'image'
   const [selectedImgData, setSelectedImgData] = useState(null);
+  const [pendingFile, setPendingFile] = useState(null);
+  const [pendingAlt, setPendingAlt] = useState('');
+  const [showFileUploadModal, setShowFileUploadModal] = useState(false);
 
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
@@ -413,16 +417,28 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Image Upload handler
-  const handleImageFile = async (e) => {
+  // When a file is chosen from disk
+  const handleImageFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    saveSelection();
+    const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+    setPendingFile(file);
+    setPendingAlt(cleanName);
+    setShowFileUploadModal(true);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // When user confirms file upload with their chosen Alt Tag
+  const handleConfirmFileUpload = async (e) => {
+    e.preventDefault();
+    if (!pendingFile) return;
 
     try {
       setUploading(true);
       deselectImage();
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', pendingFile);
 
       const res = await fetch('/api/admin/upload', {
         method: 'POST',
@@ -434,17 +450,20 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
         throw new Error(data.error || 'Failed to upload image');
       }
 
-      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      restoreSelection();
+      const altToUse = pendingAlt.trim() || pendingFile.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
       // Insert uploaded image into editor with default centered display
       execCommand(
         'insertHTML',
-        `<img src="${data.url}" alt="${cleanName}" class="align-center rounded-lg shadow border border-slate-200" style="display: block; margin: 1.5rem auto; max-width: 100%; height: auto;" /><p><br/></p>`
+        `<img src="${data.url}" alt="${altToUse}" class="align-center rounded-lg shadow border border-slate-200" style="display: block; margin: 1.5rem auto; max-width: 100%; height: auto;" /><p><br/></p>`
       );
     } catch (err) {
       alert('Image upload failed: ' + err.message);
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      setPendingFile(null);
+      setPendingAlt('');
+      setShowFileUploadModal(false);
     }
   };
 
@@ -458,13 +477,15 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
       execCommand('createLink', urlInput.trim());
     } else if (modalType === 'image') {
       deselectImage();
+      const altToUse = urlAltInput.trim() || 'Image';
       execCommand(
         'insertHTML',
-        `<img src="${urlInput.trim()}" alt="Image" class="align-center rounded-lg shadow border border-slate-200" style="display: block; margin: 1.5rem auto; max-width: 100%; height: auto;" /><p><br/></p>`
+        `<img src="${urlInput.trim()}" alt="${altToUse}" class="align-center rounded-lg shadow border border-slate-200" style="display: block; margin: 1.5rem auto; max-width: 100%; height: auto;" /><p><br/></p>`
       );
     }
 
     setUrlInput('');
+    setUrlAltInput('');
     setShowUrlModal(false);
   };
 
@@ -474,7 +495,7 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
       <input 
         type="file" 
         ref={fileInputRef} 
-        onChange={handleImageFile} 
+        onChange={handleImageFileSelect} 
         accept="image/*" 
         className="hidden" 
       />
@@ -985,18 +1006,39 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
             <p className="text-xs text-slate-500 mb-4">
               {modalType === 'link' 
                 ? 'Enter the destination URL (e.g. https://dailyhukamnama.in/...)' 
-                : 'Enter the public image URL'}
+                : 'Enter the public image URL and SEO alt tag'}
             </p>
             <form onSubmit={handleModalSubmit} className="space-y-4">
-              <input
-                type="url"
-                required
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-gold-500 focus:border-gold-500 outline-none"
-              />
-              <div className="flex justify-end space-x-2">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {modalType === 'link' ? 'Hyperlink URL' : 'Image URL'}
+                </label>
+                <input
+                  type="url"
+                  required
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-gold-500 focus:border-gold-500 outline-none"
+                />
+              </div>
+
+              {modalType === 'image' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Image Alt Tag (for SEO / Google Search)
+                  </label>
+                  <input
+                    type="text"
+                    value={urlAltInput}
+                    onChange={(e) => setUrlAltInput(e.target.value)}
+                    placeholder="e.g. Gurdwara Sri Tarn Taran Sahib Amritsar"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-gold-500 focus:border-gold-500 outline-none"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowUrlModal(false)}
@@ -1009,6 +1051,59 @@ export default function RichTextEditor({ value = '', onChange, placeholder = 'St
                   className="px-4 py-1.5 text-xs bg-gold-500 hover:bg-gold-600 text-white rounded-lg font-semibold shadow"
                 >
                   Insert
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* File Upload Modal with Alt Tag */}
+      {showFileUploadModal && pendingFile && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-5 shadow-2xl border border-slate-200 animate-fadeIn">
+            <h4 className="font-bold text-slate-900 text-base mb-1">
+              Insert Uploaded Image
+            </h4>
+            <p className="text-xs text-slate-500 mb-4">
+              File: <strong className="text-slate-700">{pendingFile.name}</strong> ({((pendingFile.size || 0) / 1024).toFixed(1)} KB)
+            </p>
+            <form onSubmit={handleConfirmFileUpload} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Image Alt Tag (Image SEO) <span className="text-gold-600 font-normal">• Recommended</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={pendingAlt}
+                  onChange={(e) => setPendingAlt(e.target.value)}
+                  placeholder="Describe this image for Google Image Search & SEO..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-gold-500 focus:border-gold-500 outline-none"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Accurate alt tags boost website SEO and appear in Google image results.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFileUploadModal(false);
+                    setPendingFile(null);
+                  }}
+                  className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="px-4 py-1.5 text-xs bg-gold-500 hover:bg-gold-600 text-white rounded-lg font-semibold shadow disabled:opacity-50 inline-flex items-center space-x-1.5"
+                >
+                  {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  <span>{uploading ? 'Uploading...' : 'Insert Image'}</span>
                 </button>
               </div>
             </form>

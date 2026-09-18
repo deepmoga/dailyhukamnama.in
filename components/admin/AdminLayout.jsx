@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { 
   LayoutDashboard, FileText, BookOpen, Users, 
-  ExternalLink, LogOut, Menu, X, PlusCircle, Sparkles, Image as ImageIcon, Settings
+  ExternalLink, LogOut, Menu, X, PlusCircle, Sparkles, Image as ImageIcon, Settings,
+  Award, Compass
 } from 'lucide-react';
 
 export default function AdminLayout({ children }) {
-  const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -55,16 +55,6 @@ export default function AdminLayout({ children }) {
     );
   }
 
-  const navItems = [
-    { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { label: 'Hukamnamas', href: '/admin/hukamnamas', icon: Sparkles },
-    { label: 'Pages Manager', href: '/admin/pages', icon: FileText },
-    { label: 'Path Pages', href: '/admin/pages?type=path', icon: BookOpen },
-    { label: 'Volunteers', href: '/admin/volunteers', icon: Users },
-    { label: 'Poster Template', href: '/admin/poster-template', icon: ImageIcon },
-    { label: 'Settings', href: '/admin/settings', icon: Settings },
-  ];
-
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar for Desktop */}
@@ -83,37 +73,10 @@ export default function AdminLayout({ children }) {
           </div>
         </div>
 
-        {/* Navigation items */}
-        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href) && !item.href.includes('type='));
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
-                  isActive
-                    ? 'bg-gold-500 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
-                }`}
-              >
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-
-          <div className="pt-4 border-t border-slate-800/80">
-            <Link
-              href="/admin/pages/new"
-              className="flex items-center space-x-2 px-3 py-2 text-xs font-semibold text-gold-400 hover:text-gold-300 hover:bg-slate-900 rounded-xl transition"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>+ Add New Page / Path</span>
-            </Link>
-          </div>
-        </nav>
+        {/* Navigation items wrapped in Suspense for searchParams */}
+        <Suspense fallback={<div className="p-4 text-xs text-slate-500">Loading nav...</div>}>
+          <SidebarNavContent />
+        </Suspense>
 
         {/* Footer controls */}
         <div className="p-3 border-t border-slate-800 space-y-2">
@@ -182,30 +145,17 @@ export default function AdminLayout({ children }) {
         {/* Mobile Navigation Drawer */}
         {mobileOpen && (
           <div className="md:hidden bg-slate-950 text-white px-4 py-4 space-y-2 border-b border-slate-800">
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-900 hover:text-white"
+            <Suspense fallback={<div className="text-xs text-slate-500">Loading...</div>}>
+              <SidebarNavContent onNavigate={() => setMobileOpen(false)} />
+            </Suspense>
+            <div className="pt-2 border-t border-slate-800">
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-950/40 rounded-lg"
               >
-                <item.icon className="w-4 h-4" />
-                <span>{item.label}</span>
-              </Link>
-            ))}
-            <Link
-              href="/admin/pages/new"
-              onClick={() => setMobileOpen(false)}
-              className="block px-3 py-2 text-sm text-gold-400 hover:bg-slate-900 rounded-lg"
-            >
-              + Add New Page / Path
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-950/40 rounded-lg"
-            >
-              Logout
-            </button>
+                Logout
+              </button>
+            </div>
           </div>
         )}
 
@@ -215,5 +165,192 @@ export default function AdminLayout({ children }) {
         </main>
       </div>
     </div>
+  );
+}
+
+function SidebarNavContent({ onNavigate }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentType = searchParams ? searchParams.get('type') : null;
+
+  const isLinkActive = (item) => {
+    if (item.href === '/admin') {
+      return pathname === '/admin';
+    }
+    if (item.href === '/admin/hukamnamas') {
+      return pathname.startsWith('/admin/hukamnamas');
+    }
+    if (item.href === '/admin/pages') {
+      return pathname === '/admin/pages' && (!currentType || currentType === 'all');
+    }
+    if (item.href === '/admin/pages?type=path') {
+      return pathname === '/admin/pages' && currentType === 'path';
+    }
+    if (item.href === '/admin/pages?type=sikh_guru') {
+      return pathname === '/admin/pages' && currentType === 'sikh_guru';
+    }
+    if (item.href === '/admin/pages?type=page') {
+      return pathname === '/admin/pages' && currentType === 'page';
+    }
+    return pathname.startsWith(item.href);
+  };
+
+  return (
+    <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+      {/* General Section */}
+      <div className="space-y-1">
+        <Link
+          href="/admin"
+          onClick={onNavigate}
+          className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
+            isLinkActive({ href: '/admin' })
+              ? 'bg-gold-500 text-white shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+        >
+          <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
+          <span>Dashboard</span>
+        </Link>
+
+        <Link
+          href="/admin/hukamnamas"
+          onClick={onNavigate}
+          className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
+            isLinkActive({ href: '/admin/hukamnamas' })
+              ? 'bg-gold-500 text-white shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 flex-shrink-0" />
+          <span>Daily Hukamnamas</span>
+        </Link>
+      </div>
+
+      {/* Pages Section */}
+      <div className="space-y-1">
+        <div className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+          Pages & Content
+        </div>
+
+        <Link
+          href="/admin/pages"
+          onClick={onNavigate}
+          className={`flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium transition ${
+            isLinkActive({ href: '/admin/pages' })
+              ? 'bg-gold-500 text-white shadow-md font-semibold'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+        >
+          <FileText className="w-4 h-4 flex-shrink-0" />
+          <span>All Pages</span>
+        </Link>
+
+        <Link
+          href="/admin/pages?type=path"
+          onClick={onNavigate}
+          className={`flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium transition ${
+            isLinkActive({ href: '/admin/pages?type=path' })
+              ? 'bg-gold-500 text-white shadow-md font-semibold'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+        >
+          <BookOpen className="w-4 h-4 flex-shrink-0" />
+          <span>Nitnem Path Pages</span>
+        </Link>
+
+        <Link
+          href="/admin/pages?type=sikh_guru"
+          onClick={onNavigate}
+          className={`flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium transition ${
+            isLinkActive({ href: '/admin/pages?type=sikh_guru' })
+              ? 'bg-gold-500 text-white shadow-md font-semibold'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+        >
+          <Award className="w-4 h-4 flex-shrink-0" />
+          <span>Sikh Gurus Pages</span>
+        </Link>
+
+        <Link
+          href="/admin/pages?type=page"
+          onClick={onNavigate}
+          className={`flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium transition ${
+            isLinkActive({ href: '/admin/pages?type=page' })
+              ? 'bg-gold-500 text-white shadow-md font-semibold'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+        >
+          <Compass className="w-4 h-4 flex-shrink-0" />
+          <span>Standard Pages</span>
+        </Link>
+      </div>
+
+      {/* Management & Tools */}
+      <div className="space-y-1">
+        <div className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+          System & Tools
+        </div>
+
+        <Link
+          href="/admin/volunteers"
+          onClick={onNavigate}
+          className={`flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium transition ${
+            isLinkActive({ href: '/admin/volunteers' })
+              ? 'bg-gold-500 text-white shadow-md font-semibold'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+        >
+          <Users className="w-4 h-4 flex-shrink-0" />
+          <span>Volunteers</span>
+        </Link>
+
+        <Link
+          href="/admin/poster-template"
+          onClick={onNavigate}
+          className={`flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium transition ${
+            isLinkActive({ href: '/admin/poster-template' })
+              ? 'bg-gold-500 text-white shadow-md font-semibold'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+        >
+          <ImageIcon className="w-4 h-4 flex-shrink-0" />
+          <span>Poster Template</span>
+        </Link>
+
+        <Link
+          href="/admin/settings"
+          onClick={onNavigate}
+          className={`flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium transition ${
+            isLinkActive({ href: '/admin/settings' })
+              ? 'bg-gold-500 text-white shadow-md font-semibold'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+        >
+          <Settings className="w-4 h-4 flex-shrink-0" />
+          <span>Settings</span>
+        </Link>
+      </div>
+
+      {/* Quick Add Actions */}
+      <div className="pt-3 border-t border-slate-800/80 space-y-1">
+        <Link
+          href="/admin/hukamnamas/new"
+          onClick={onNavigate}
+          className="flex items-center space-x-2 px-3 py-1.5 text-xs font-medium text-gold-400 hover:text-gold-300 hover:bg-slate-900 rounded-xl transition"
+        >
+          <PlusCircle className="w-3.5 h-3.5" />
+          <span>+ Add Hukamnama</span>
+        </Link>
+
+        <Link
+          href="/admin/pages/new"
+          onClick={onNavigate}
+          className="flex items-center space-x-2 px-3 py-1.5 text-xs font-medium text-gold-400 hover:text-gold-300 hover:bg-slate-900 rounded-xl transition"
+        >
+          <PlusCircle className="w-3.5 h-3.5" />
+          <span>+ Add New Page</span>
+        </Link>
+      </div>
+    </nav>
   );
 }

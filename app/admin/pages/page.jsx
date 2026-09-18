@@ -19,27 +19,51 @@ export default function PagesManagementPage() {
 
 function PagesManagementContent() {
   const searchParams = useSearchParams();
-  const initialType = searchParams.get('type') || 'all';
+  const currentType = searchParams ? (searchParams.get('type') || 'all') : 'all';
 
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(initialType);
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState(null);
 
+  const typeHeaders = {
+    all: {
+      title: 'All Website Pages',
+      desc: 'Complete directory of all pages, Banis, Guru profiles, and articles.',
+      badge: 'All Pages'
+    },
+    path: {
+      title: 'Nitnem Path Pages',
+      desc: 'Manage all 18+ prayer banis, Gurmukhi text, audio files, and translations.',
+      badge: 'Nitnem Banis'
+    },
+    sikh_guru: {
+      title: 'Sikh Gurus Pages',
+      desc: 'Manage individual Sikh Guru biographies, holy compositions, and life history.',
+      badge: 'Sikh Gurus'
+    },
+    page: {
+      title: 'Standard Website Pages',
+      desc: 'Manage Contact Us, About Hukamnama, Golden Temple history, and general pages.',
+      badge: 'Standard Pages'
+    },
+  };
+
+  const headerInfo = typeHeaders[currentType] || typeHeaders.all;
+
   useEffect(() => {
     fetchPages();
-  }, [activeTab]);
+  }, [currentType]);
 
   async function fetchPages() {
     setLoading(true);
     try {
       let url = '/api/admin/pages';
-      if (activeTab === 'path') {
+      if (currentType === 'path') {
         url += '?type=path';
-      } else if (activeTab === 'page') {
+      } else if (currentType === 'page') {
         url += '?type=page';
-      } else if (activeTab === 'sikh_guru') {
+      } else if (currentType === 'sikh_guru') {
         url += '?type=sikh_guru';
       }
 
@@ -92,11 +116,16 @@ function PagesManagementContent() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
+            <div className="flex items-center space-x-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gold-100 text-gold-800 border border-gold-200">
+                {headerInfo.badge}
+              </span>
+            </div>
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-serif-heading">
-              Pages & Path Manager
+              {headerInfo.title}
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Create and manage content for about-hukam, sikh-gurus, path pages, menu sort orders, and visibility
+              {headerInfo.desc}
             </p>
           </div>
 
@@ -111,56 +140,20 @@ function PagesManagementContent() {
           </div>
         </div>
 
-        {/* Filter Tabs & Search */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 rounded-xl w-full sm:w-auto">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                activeTab === 'all'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              All Pages
-            </button>
-            <button
-              onClick={() => setActiveTab('path')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                activeTab === 'path'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Nitnem Path Pages
-            </button>
-            <button
-              onClick={() => setActiveTab('sikh_guru')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                activeTab === 'sikh_guru'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Sikh Gurus
-            </button>
-            <button
-              onClick={() => setActiveTab('page')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                activeTab === 'page'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Standard Pages
-            </button>
+        {/* Search & Info Bar (Removed top tabs as requested) */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center space-x-2 text-xs text-slate-600">
+            <span className="font-semibold text-slate-900">Total in {headerInfo.badge}:</span>
+            <span className="px-2 py-0.5 rounded-md bg-slate-100 font-mono font-bold text-slate-700">
+              {filteredPages.length} {filteredPages.length === 1 ? 'entry' : 'entries'}
+            </span>
           </div>
 
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by title or slug..."
+              placeholder={`Search ${headerInfo.badge.toLowerCase()} by title or slug...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold-500 focus:bg-white transition"

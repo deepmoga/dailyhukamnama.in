@@ -568,13 +568,12 @@ export default function HukamnamaViewer({ hukamnama, loading }) {
               <span>Source: SGPC Amritsar</span>
               <span>•</span>
               <a 
-                href="https://hs.sgpc.net/hukamnamapdf.php" 
+                href="https://sgpc.net/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="inline-flex items-center space-x-1 text-gold-600 hover:text-gold-700 font-medium underline"
               >
-                <FileText className="w-3.5 h-3.5" />
-                <span>Official SGPC PDF</span>
+                <span>https://sgpc.net/</span>
                 <ExternalLink className="w-3 h-3 ml-0.5" />
               </a>
             </div>

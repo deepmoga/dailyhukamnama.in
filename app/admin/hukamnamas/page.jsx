@@ -5,7 +5,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import Link from 'next/link';
 import { 
   Sparkles, Search, Calendar, BookOpen, ExternalLink, 
-  Edit, Loader2, RefreshCw, Eye, Image as ImageIcon, ChevronLeft, ChevronRight 
+  Edit, Loader2, RefreshCw, Eye, Image as ImageIcon, ChevronLeft, ChevronRight, PlusCircle 
 } from 'lucide-react';
 
 export default function AdminHukamnamasPage() {
@@ -88,7 +88,15 @@ export default function AdminHukamnamasPage() {
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              href="/admin/hukamnamas/new"
+              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-md transition"
+            >
+              <PlusCircle className="w-4 h-4 text-gold-400" />
+              <span>+ Add New Hukamnama</span>
+            </Link>
+
             <button
               onClick={handleSyncToday}
               disabled={syncing}

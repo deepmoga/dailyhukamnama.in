@@ -7,6 +7,7 @@ import { Heart, Radio, ExternalLink } from 'lucide-react';
 
 export default function Footer() {
   const [footerLogo, setFooterLogo] = useState('/logo.png');
+  const [footerLogoAlt, setFooterLogoAlt] = useState('Daily Hukamnama Logo');
 
   useEffect(() => {
     async function loadFooterLogo() {
@@ -15,6 +16,9 @@ export default function Footer() {
         const data = await res.json();
         if (data.settings?.footer_logo) {
           setFooterLogo(data.settings.footer_logo);
+        }
+        if (data.settings?.footer_logo_alt) {
+          setFooterLogoAlt(data.settings.footer_logo_alt);
         }
       } catch (e) {
         // fallback
@@ -57,7 +61,7 @@ export default function Footer() {
               <div className="relative w-12 h-12 flex-shrink-0 bg-white rounded-full p-1 overflow-hidden flex items-center justify-center">
                 <img
                   src={footerLogo || "/logo.png"}
-                  alt="Daily Hukamnama Logo"
+                  alt={footerLogoAlt || "Daily Hukamnama Logo"}
                   className="w-full h-full object-contain"
                 />
               </div>

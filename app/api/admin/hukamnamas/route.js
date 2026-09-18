@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { getPosterPagesForDate, anmolLipiToGurmukhi } from '@/lib/hukamnama-service';
+import { 
+  getPosterPagesForDate, 
+  anmolLipiToGurmukhi, 
+  forceRegeneratePoster,
+  generateHukamnamaSeoMetadata 
+} from '@/lib/hukamnama-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,3 +65,108 @@ export async function GET(request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function POST(request) {
+  try {
+    const body = await request.json();
+    const {
+      hukamnama_date,
+      title,
+      ang,
+      raag,
+      author,
+      gurmukhi_header,
+      shabad_title,
+      gurmukhi_only,
+      punjabi_arth,
+      english_translation,
+      hindi_translation,
+      content_html,
+      source_image,
+      meta_desc,
+      meta_keywords,
+      image_alt,
+      generate_poster = false,
+    } = body;
+
+    if (!hukamnama_date) {
+      return NextResponse.json({ error: 'Hukamnama date is required' }, { status: 400 });
+    }
+
+    const cleanDate = String(hukamnama_date).split('T')[0].trim();
+
+    // Check if a Hukamnama already exists for this date
+    const existing = await query(
+      "SELECT id FROM hukamnamas WHERE DATE_FORMAT(hukamnama_date, '%Y-%m-%d') = ? LIMIT 1",
+      [cleanDate]
+    );
+
+    if (existing && existing.length > 0) {
+      return NextResponse.json({
+        error: `A Hukamnama already exists for date ${cleanDate} (ID #${existing[0].id}). You can edit it from the directory list.`,
+        existingId: existing[0].id,
+      }, { status: 409 });
+    }
+
+    // Auto-generate fallback SEO if empty
+    const fallbackSeo = generateHukamnamaSeoMetadata({
+      dateStr: cleanDate,
+      ang,
+      raag,
+      author,
+    });
+
+    const finalMetaDesc = meta_desc !== undefined && meta_desc !== null && meta_desc !== '' ? meta_desc : fallbackSeo.metaDesc;
+    const finalMetaKeywords = meta_keywords !== undefined && meta_keywords !== null && meta_keywords !== '' ? meta_keywords : fallbackSeo.metaKeywords;
+    const finalImageAlt = image_alt !== undefined && image_alt !== null && image_alt !== '' ? image_alt : fallbackSeo.imageAlt;
+    const finalTitle = title || `Daily Hukamnama Sri Darbar Sahib – ${cleanDate}`;
+
+    const insertResult = await query(
+      `INSERT INTO hukamnamas (
+        hukamnama_date, title, ang, raag, author, gurmukhi_header,
+        shabad_title, gurmukhi_only, punjabi_arth, english_translation,
+        hindi_translation, content_html, source_image, meta_desc,
+        meta_keywords, image_alt, views
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      [
+        cleanDate,
+        finalTitle,
+        ang ? String(ang).trim() : null,
+        raag || null,
+        author || null,
+        gurmukhi_header ? anmolLipiToGurmukhi(gurmukhi_header) : null,
+        shabad_title || null,
+        gurmukhi_only || null,
+        punjabi_arth || null,
+        english_translation || null,
+        hindi_translation || null,
+        content_html || null,
+        source_image || null,
+        finalMetaDesc,
+        finalMetaKeywords,
+        finalImageAlt,
+      ]
+    );
+
+    let posterResult = null;
+    if (generate_poster) {
+      try {
+        posterResult = await forceRegeneratePoster(cleanDate);
+      } catch (postErr) {
+        console.warn('Poster generation warning on create:', postErr.message);
+        posterResult = { success: false, error: postErr.message };
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      id: insertResult.insertId,
+      posterResult,
+      message: 'Hukamnama created successfully!',
+    });
+  } catch (err) {
+    console.error('Error creating hukamnama:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
