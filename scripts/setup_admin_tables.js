@@ -1,14 +1,35 @@
 const mysql = require('mysql2/promise');
+const fs = require('fs');
+const path = require('path');
+
+// Auto-read .env.local if present
+try {
+  const envPath = path.join(__dirname, '..', '.env.local');
+  if (fs.existsSync(envPath)) {
+    const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+        const idx = trimmed.indexOf('=');
+        const k = trimmed.slice(0, idx).trim();
+        const v = trimmed.slice(idx + 1).trim();
+        if (process.env[k] === undefined) {
+          process.env[k] = v;
+        }
+      }
+    }
+  }
+} catch (e) {}
 
 async function setup() {
   const conn = await mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'dailyhukamnama.in'
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : '',
+    database: process.env.DB_NAME || 'dailyhukamnama.in'
   });
 
-  console.log('Connected to MySQL');
+  console.log('Connected to MySQL database:', process.env.DB_NAME || 'dailyhukamnama.in');
 
   // 1. pages table
   await conn.query(`
