@@ -575,7 +575,7 @@ export default function ConvertPage() {
 
       {/* Hero Header */}
       <section className="bg-gradient-to-b from-slate-900 via-slate-850 to-slate-900 text-white py-10 px-4 sm:px-6 lg:px-8 border-b border-gold-500/20 shadow-inner">
-        <div className="max-w-5xl mx-auto text-center space-y-4">
+        <div className="max-w-7xl mx-auto text-center space-y-4">
           <div className="inline-flex items-center space-x-2 bg-gold-500/10 border border-gold-400/30 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider text-gold-300">
             <ArrowLeftRight className="w-4 h-4 text-gold-400" />
             <span>ਤਾਰੀਖ ਕਨਵਰਟਰ • Date Converter</span>
@@ -621,7 +621,7 @@ export default function ConvertPage() {
       </section>
 
       {/* Main Conversion Tool */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
         {/* Converter Input Controls Card */}
         <div className="bg-white rounded-2xl shadow-md border border-gold-200/90 p-5 sm:p-7 space-y-5">

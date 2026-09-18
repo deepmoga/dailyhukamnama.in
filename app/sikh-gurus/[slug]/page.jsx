@@ -84,7 +84,7 @@ export default async function GuruDetailPage({ params }) {
 
       {/* Hero Header */}
       <section className="bg-gradient-to-r from-slate-950 via-slate-900 to-spiritual-navy text-white py-14 px-4 sm:px-6 lg:px-8 border-b-2 border-gold-500">
-        <div className="max-w-4xl mx-auto space-y-4">
+        <div className="max-w-7xl mx-auto space-y-4">
           <Link
             href="/sikh-gurus"
             className="inline-flex items-center space-x-1 text-xs text-gold-400 hover:text-gold-300 font-medium transition"
@@ -118,7 +118,7 @@ export default async function GuruDetailPage({ params }) {
       </section>
 
       {/* Main Content: Backend Description */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
         {/* Related language buttons if any */}
         {guru.relatedButtons && guru.relatedButtons.length > 0 && (
           <div className="flex flex-wrap items-center gap-2.5">

@@ -64,7 +64,7 @@ export default async function DynamicSlugPage({ params }) {
 
       {/* Hero Header Banner */}
       <section className="bg-gradient-to-r from-slate-950 via-slate-900 to-spiritual-navy text-white py-14 sm:py-16 px-4 sm:px-6 lg:px-8 border-b-2 border-gold-500">
-        <div className="max-w-4xl mx-auto space-y-4">
+        <div className="max-w-7xl mx-auto space-y-4">
           {/* Breadcrumb */}
           <div className="flex items-center space-x-2 text-xs text-gold-400 font-medium">
             <Link href="/" className="hover:underline">Home</Link>
@@ -105,7 +105,7 @@ export default async function DynamicSlugPage({ params }) {
       </section>
 
       {/* Main Content Area */}
-      <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 flex-1">
+      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 flex-1">
         <article className="bg-white rounded-2xl p-6 sm:p-10 border border-slate-200/80 shadow-sm space-y-6">
           {/* Audio Player for Path at the top */}
           {page.audio_url && (

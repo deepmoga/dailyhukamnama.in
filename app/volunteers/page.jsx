@@ -141,7 +141,7 @@ export default function VolunteersPage() {
 
       {/* Hero Header Section - matching user screenshot styling (#f6f4ee) */}
       <section className="bg-[#f6f4ee] py-14 px-4 sm:px-6 lg:px-8 border-b border-stone-200">
-        <div className="max-w-4xl mx-auto text-center space-y-2">
+        <div className="max-w-7xl mx-auto text-center space-y-2">
           <h1 className="text-4xl sm:text-5xl font-serif-heading italic font-normal text-stone-900 tracking-wide">
             Volunteers
           </h1>
@@ -154,7 +154,7 @@ export default function VolunteersPage() {
       </section>
 
       {/* Main Content Area */}
-      <main className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 flex-1 space-y-12">
+      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 flex-1 space-y-12">
         {/* Table Controls (Entries per page & Search) - exact replica of user screenshot */}
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-slate-700">

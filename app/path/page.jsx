@@ -60,7 +60,7 @@ export default async function PathHubPage() {
 
       {/* Hero Banner */}
       <section className="bg-gradient-to-r from-slate-950 via-slate-900 to-spiritual-navy text-white py-14 sm:py-16 px-4 sm:px-6 lg:px-8 border-b-2 border-gold-500">
-        <div className="max-w-4xl mx-auto text-center space-y-3">
+        <div className="max-w-7xl mx-auto text-center space-y-3">
           <div className="inline-flex items-center space-x-2 bg-gold-500/20 border border-gold-400/30 px-3.5 py-1 rounded-full text-gold-300 text-xs font-semibold uppercase tracking-wider">
             <Sparkles className="w-3.5 h-3.5 text-gold-400" />
             <span>Daily Nitnem & Sacred Gurbani</span>
@@ -78,7 +78,7 @@ export default async function PathHubPage() {
       </section>
 
       {/* Beautiful Paths Pill Grid (matching screenshot layout) */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="bg-white/80 backdrop-blur-xs rounded-3xl p-6 sm:p-10 border border-gold-200 shadow-sm">
           <div className="text-center mb-8 sm:mb-10">
             <h2 className="font-serif-heading text-xl sm:text-2xl font-bold text-slate-900">
@@ -89,7 +89,7 @@ export default async function PathHubPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4 max-w-7xl mx-auto">
             {paths.map((item) => {
               const href = item.slug.startsWith('path/') || item.slug.startsWith('/')
                 ? (item.slug.startsWith('/') ? item.slug : `/${item.slug}`)

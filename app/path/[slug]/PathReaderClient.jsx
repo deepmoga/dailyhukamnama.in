@@ -41,7 +41,7 @@ export default function PathReaderClient({ path }) {
 
       {/* Hero Header */}
       <section className="bg-gradient-to-r from-slate-950 via-slate-900 to-spiritual-navy text-white py-12 px-4 sm:px-6 lg:px-8 border-b-2 border-gold-500">
-        <div className="max-w-4xl mx-auto space-y-3">
+        <div className="max-w-7xl mx-auto space-y-3">
           <Link
             href="/path"
             className="inline-flex items-center space-x-1 text-xs text-gold-400 hover:text-gold-300 font-medium transition"
@@ -74,7 +74,7 @@ export default function PathReaderClient({ path }) {
 
       {/* Reader Controls Bar */}
       <div className="sticky top-20 z-40 bg-white/95 backdrop-blur border-b border-gold-200 shadow-sm px-4 sm:px-6 lg:px-8 py-3">
-        <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           {/* View Toggles */}
           <div className="flex items-center space-x-2 text-xs">
             <button
@@ -138,7 +138,7 @@ export default function PathReaderClient({ path }) {
       </div>
 
       {/* Main Path Verses */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
         <div className="bg-white rounded-2xl shadow-md border border-gold-200 p-6 sm:p-10 space-y-8">
           {path.verses && path.verses.length > 0 ? (
             path.verses.map((verse, idx) => (

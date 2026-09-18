@@ -265,7 +265,7 @@ export default function CalendarPage() {
 
       {/* Hero Banner with Language Toggle */}
       <section className="bg-gradient-to-r from-slate-950 via-slate-900 to-spiritual-navy text-white py-12 px-4 sm:px-6 lg:px-8 border-b-2 border-gold-500 shadow-md">
-        <div className="max-w-5xl mx-auto text-center space-y-4">
+        <div className="max-w-7xl mx-auto text-center space-y-4">
           <div className="inline-flex items-center space-x-2 bg-gold-500/20 border border-gold-400/30 px-4 py-1.5 rounded-full text-gold-300 text-xs font-semibold uppercase tracking-wider">
             <CalendarIcon className="w-4 h-4 text-gold-400" />
             <span>ਨਾਨਕਸ਼ਾਹੀ ਕੈਲੰਡਰ • Nanakshahi & Gregorian Calendar</span>
@@ -311,7 +311,7 @@ export default function CalendarPage() {
       </section>
 
       {/* Main Calendar Container */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Color Legend Card */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gold-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="font-semibold text-slate-800 flex items-center space-x-1.5">
