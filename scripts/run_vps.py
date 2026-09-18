@@ -35,6 +35,8 @@ deploy_commands = [
     "curl -s -o /dev/null -w 'Sikh Gurus Hub HTTP status: %{http_code}\n' http://127.0.0.1:3015/sikh-gurus",
     # Verify contact us page
     "curl -s -o /dev/null -w 'Contact Us page HTTP status: %{http_code}\n' http://127.0.0.1:3015/contact-us",
+    # Verify about hukam page
+    "curl -s -o /dev/null -w 'About Hukam page HTTP status: %{http_code}\n' http://127.0.0.1:3015/about-hukam",
 ]
 
 for cmd in deploy_commands:
