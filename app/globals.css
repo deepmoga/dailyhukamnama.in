@@ -284,19 +284,27 @@ body {
 }
 
 /* ========================================================= */
-/* GLOBAL CONTAINER WIDTH CONFIGURATION (85% on Desktop)     */
+/* GLOBAL CONTAINER WIDTH CONFIGURATION                      */
 /* ========================================================= */
 @media (min-width: 1024px) {
   .max-w-7xl, .site-container {
-    max-width: 85% !important;
-    width: 85% !important;
+    max-width: 1560px !important;
+    width: 95% !important;
+  }
+  .max-w-6xl {
+    max-width: 1400px !important;
+    width: 95% !important;
   }
 }
 
 @media (min-width: 640px) and (max-width: 1023px) {
   .max-w-7xl, .site-container {
-    max-width: 92% !important;
-    width: 92% !important;
+    max-width: 96% !important;
+    width: 96% !important;
+  }
+  .max-w-6xl {
+    max-width: 96% !important;
+    width: 96% !important;
   }
 }
 
